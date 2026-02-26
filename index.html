@@ -27,52 +27,41 @@
         
         button {
             padding: 10px 15px;
-            background-color: #27ae60;
-            color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             transition: 0.3s;
+            font-weight: 600;
         }
-        button:hover { background-color: #219150; transform: translateY(-1px); }
+        button:hover { transform: translateY(-1px); opacity: 0.9; }
 
         .btn-venta { 
             background-color: #2980b9; 
-            margin-left: 10px; 
+            color: white;
             padding: 10px 22px;
             border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.95em;
+            margin-left: 10px;
         }
-        .btn-venta:hover { background-color: #21618c; }
 
         .btn-reponer {
             background-color: #f39c12;
-            margin-left: 5px;
+            color: white;
             padding: 10px 15px;
             border-radius: 50px;
-            font-weight: 600;
+            margin-left: 5px;
         }
 
-        /* BOTÓN CANCELAR VENTA */
-        .btn-cancelar {
+        /* BOTÓN ANULAR (Nuevo Estilo Pastilla) */
+        .btn-anular {
             background-color: #e74c3c;
             color: white;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            padding: 0;
-            font-size: 12px;
-            line-height: 25px;
-            text-align: center;
+            padding: 6px 15px;
+            border-radius: 50px;
+            font-size: 0.85em;
             margin-left: 10px;
         }
-        .btn-cancelar:hover { background-color: #c0392b; }
         
-        .search-container {
-            margin-bottom: 10px;
-            display: flex;
-        }
+        .search-container { margin-bottom: 10px; display: flex; }
         .search-input {
             width: 100%;
             padding: 12px;
@@ -85,11 +74,10 @@
         li { padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         
         .badge-danger { color: #e74c3c; font-weight: bold; margin-left: 5px; }
-        .fecha-tag { font-size: 0.85em; background: #ecf0f1; padding: 2px 8px; border-radius: 4px; color: #7f8c8d; }
+        .fecha-tag { font-size: 0.85em; background: #ecf0f1; padding: 2px 8px; border-radius: 4px; color: #7f8c8d; margin-left: 10px; }
         .total-dia {
             background: #2c3e50 !important;
             color: white;
-            font-weight: bold;
             font-size: 1.1em;
             margin-top: 15px;
             border-radius: 0 0 8px 8px;
@@ -107,7 +95,7 @@
         <input id="precio" type="number" placeholder="Precio">
         <input id="stock" type="number" placeholder="Stock">
         <input id="stock_minimo" type="number" placeholder="Stock mínimo">
-        <button onclick="agregarProducto()">Agregar</button>
+        <button onclick="agregarProducto()" style="background-color: #27ae60; color:white;">Agregar</button>
     </div>
 
     <hr>
@@ -124,7 +112,7 @@
         <h2>Historial de Ventas</h2>
         <label>Día: </label>
         <input type="date" id="filtroFecha" onchange="verVentas()">
-        <button onclick="verVentas()" style="background:#7f8c8d">Actualizar</button>
+        <button onclick="verVentas()" style="background-color:#7f8c8d; color:white;">Actualizar</button>
     </div>
     <ul id="listaVentas"></ul>
 </div>
@@ -135,16 +123,6 @@
     const client = supabase.createClient(supabaseUrl, supabaseKey)
 
     let productosLocales = [];
-
-    async function agregarProducto() {
-        const nombre = document.getElementById("nombre").value;
-        const precio = parseFloat(document.getElementById("precio").value);
-        const stock = parseInt(document.getElementById("stock").value);
-        const stock_minimo = parseInt(document.getElementById("stock_minimo").value);
-        if(!nombre || isNaN(precio)) return alert("Completa los datos");
-        await client.from("productos").insert({ nombre, precio, stock, stock_minimo });
-        cargarProductos();
-    }
 
     async function cargarProductos() {
         const { data } = await client.from("productos").select("*").order("nombre", { ascending: true });
@@ -168,6 +146,16 @@
         });
     }
 
+    async function agregarProducto() {
+        const nombre = document.getElementById("nombre").value;
+        const precio = parseFloat(document.getElementById("precio").value);
+        const stock = parseInt(document.getElementById("stock").value);
+        const stock_minimo = parseInt(document.getElementById("stock_minimo").value);
+        if(!nombre || isNaN(precio)) return alert("Completa los datos");
+        await client.from("productos").insert({ nombre, precio, stock, stock_minimo });
+        cargarProductos();
+    }
+
     async function vender(id) {
         const { data: p } = await client.from("productos").select("*").eq("id", id).single();
         if (p.stock <= 0) return alert("No hay stock");
@@ -177,29 +165,35 @@
         setTimeout(verVentas, 300);
     }
 
-    // NUEVA FUNCIÓN: CANCELAR VENTA
-    async function cancelarVenta(ventaId, nombreProducto, precio) {
-        if (!confirm(`¿Anular venta de "${nombreProducto}"? Se devolverá 1 unidad al stock.`)) return;
+    // FUNCIÓN MEJORADA: ANULAR VENTA
+    async function anularVenta(ventaId, nombreProducto) {
+        if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe borrará el registro y se devolverá 1 unidad al stock.`)) return;
 
-        // 1. Obtener el producto para sumarle el stock
-        const { data: p } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
-        
-        if (p) {
-            await client.from("productos").update({ stock: p.stock + 1 }).eq("id", p.id);
+        try {
+            // 1. Buscamos el producto por nombre para sumarle el stock
+            const { data: prod } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
+            
+            if (prod) {
+                await client.from("productos").update({ stock: prod.stock + 1 }).eq("id", prod.id);
+            }
+
+            // 2. Borramos la venta definitivamente
+            await client.from("ventas").delete().eq("id", ventaId);
+
+            // 3. Actualizamos todo
+            await cargarProductos();
+            await verVentas();
+        } catch (err) {
+            console.error(err);
+            alert("Hubo un error al anular la venta");
         }
-
-        // 2. Borrar la venta
-        await client.from("ventas").delete().eq("id", ventaId);
-
-        cargarProductos();
-        verVentas();
     }
 
     async function reponerStock(id, nombre, stockActual, precioActual) {
         const cant = prompt(`Sumar al stock de "${nombre}":`, "0");
-        if (cant === null || isNaN(cant)) return;
+        if (cant === null || isNaN(cant) || cant === "") return;
         const prec = prompt(`Nuevo precio:`, precioActual);
-        if (prec === null || isNaN(prec)) return;
+        if (prec === null || isNaN(prec) || prec === "") return;
         await client.from("productos").update({ stock: stockActual + parseInt(cant), precio: parseFloat(prec) }).eq("id", id);
         cargarProductos();
     }
@@ -213,14 +207,16 @@
         const filtro = document.getElementById("filtroFecha").value;
         const lista = document.getElementById("listaVentas");
         if (!filtro) return;
+
         const { data, error } = await client.from("ventas").select("*")
-            .gte("created_at", `${filtro}T00:00:00.000Z`).lte("created_at", `${filtro}T23:59:59.999Z`)
+            .gte("created_at", `${filtro}T00:00:00.000Z`)
+            .lte("created_at", `${filtro}T23:59:59.999Z`)
             .order("created_at", { ascending: false });
 
         lista.innerHTML = "";
         let total = 0;
         if (!data || data.length === 0) {
-            lista.innerHTML = "<li>No hay ventas.</li>";
+            lista.innerHTML = "<li>No hay ventas para este día.</li>";
             return;
         }
         data.forEach(v => {
@@ -228,14 +224,17 @@
             const hora = new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             total += parseFloat(v.precio) || 0;
             item.innerHTML = `
-                <div><strong>${v.nombre_producto}</strong> - $${v.precio} <span class="fecha-tag">${hora}</span></div>
-                <button class="btn-cancelar" onclick="cancelarVenta(${v.id}, '${v.nombre_producto}', ${v.precio})" title="Anular venta">✕</button>
+                <div>
+                    <strong>${v.nombre_producto}</strong> - $${v.precio} 
+                    <span class="fecha-tag">🕒 ${hora}</span>
+                </div>
+                <button class="btn-anular" onclick="anularVenta(${v.id}, '${v.nombre_producto}')">Anular Venta</button>
             `;
             lista.appendChild(item);
         });
         const tItem = document.createElement("li");
         tItem.className = "total-dia";
-        tItem.innerHTML = `<span>TOTAL:</span> <span>$${total.toFixed(2)}</span>`;
+        tItem.innerHTML = `<span>TOTAL DEL DÍA:</span> <span>$${total.toFixed(2)}</span>`;
         lista.appendChild(tItem);
     }
 
