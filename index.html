@@ -51,11 +51,10 @@
             margin-left: 5px;
         }
 
-        /* BOTÓN ANULAR (Nuevo Estilo Pastilla) */
         .btn-anular {
             background-color: #e74c3c;
             color: white;
-            padding: 6px 15px;
+            padding: 8px 18px;
             border-radius: 50px;
             font-size: 0.85em;
             margin-left: 10px;
@@ -162,31 +161,35 @@
         await client.from("productos").update({ stock: p.stock - 1 }).eq("id", id);
         await client.from("ventas").insert({ nombre_producto: p.nombre, precio: p.precio });
         cargarProductos();
-        setTimeout(verVentas, 300);
+        setTimeout(verVentas, 500);
     }
 
-    // FUNCIÓN MEJORADA: ANULAR VENTA
+    // FUNCIÓN CORREGIDA: ANULAR VENTA (BORRA Y REPONE)
     async function anularVenta(ventaId, nombreProducto) {
-        if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe borrará el registro y se devolverá 1 unidad al stock.`)) return;
+        if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe eliminará de la lista y se devolverá 1 unidad al stock.`)) return;
 
-        try {
-            // 1. Buscamos el producto por nombre para sumarle el stock
-            const { data: prod } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
-            
-            if (prod) {
-                await client.from("productos").update({ stock: prod.stock + 1 }).eq("id", prod.id);
-            }
+        // 1. Borrar la venta primero
+        const { error: errorBorrado } = await client
+            .from("ventas")
+            .delete()
+            .eq("id", ventaId);
 
-            // 2. Borramos la venta definitivamente
-            await client.from("ventas").delete().eq("id", ventaId);
-
-            // 3. Actualizamos todo
-            await cargarProductos();
-            await verVentas();
-        } catch (err) {
-            console.error(err);
-            alert("Hubo un error al anular la venta");
+        if (errorBorrado) {
+            alert("Error al eliminar la venta de la base de datos.");
+            return;
         }
+
+        // 2. Si se borró, buscar producto para devolver stock
+        const { data: prod } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
+        
+        if (prod) {
+            await client.from("productos").update({ stock: prod.stock + 1 }).eq("id", prod.id);
+        }
+
+        // 3. Refrescar ambas listas inmediatamente
+        await cargarProductos();
+        await verVentas();
+        alert("Venta anulada correctamente.");
     }
 
     async function reponerStock(id, nombre, stockActual, precioActual) {
