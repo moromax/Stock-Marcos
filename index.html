@@ -51,7 +51,6 @@
             margin-left: 5px;
         }
 
-        /* BOTÓN ANULAR (Estilo Pastilla Rojo) */
         .btn-anular {
             background-color: #e74c3c;
             color: white;
@@ -124,6 +123,45 @@
 
     let productosLocales = [];
 
+    // FUNCIÓN MEJORADA: AGREGAR, AVISAR Y LIMPIAR
+    async function agregarProducto() {
+        const inputNombre = document.getElementById("nombre");
+        const inputPrecio = document.getElementById("precio");
+        const inputStock = document.getElementById("stock");
+        const inputMinimo = document.getElementById("stock_minimo");
+
+        const nombre = inputNombre.value;
+        const precio = parseFloat(inputPrecio.value);
+        const stock = parseInt(inputStock.value);
+        const stock_minimo = parseInt(inputMinimo.value);
+
+        if(!nombre || isNaN(precio)) return alert("Por favor, completa nombre y precio");
+
+        const { error } = await client.from("productos").insert({ 
+            nombre, 
+            precio, 
+            stock: stock || 0, 
+            stock_minimo: stock_minimo || 0 
+        });
+
+        if (error) {
+            alert("Error al guardar: " + error.message);
+        } else {
+            alert(`¡"${nombre}" agregado con éxito!`);
+            
+            // LIMPIAR LOS INPUTS
+            inputNombre.value = "";
+            inputPrecio.value = "";
+            inputStock.value = "";
+            inputMinimo.value = "";
+            
+            // PONER EL FOCO DE NUEVO EN EL NOMBRE
+            inputNombre.focus();
+            
+            cargarProductos();
+        }
+    }
+
     async function cargarProductos() {
         const { data } = await client.from("productos").select("*").order("nombre", { ascending: true });
         productosLocales = data || [];
@@ -146,16 +184,6 @@
         });
     }
 
-    async function agregarProducto() {
-        const nombre = document.getElementById("nombre").value;
-        const precio = parseFloat(document.getElementById("precio").value);
-        const stock = parseInt(document.getElementById("stock").value);
-        const stock_minimo = parseInt(document.getElementById("stock_minimo").value);
-        if(!nombre || isNaN(precio)) return alert("Completa los datos");
-        await client.from("productos").insert({ nombre, precio, stock, stock_minimo });
-        cargarProductos();
-    }
-
     async function vender(id) {
         const { data: p } = await client.from("productos").select("*").eq("id", id).single();
         if (p.stock <= 0) return alert("No hay stock");
@@ -165,16 +193,13 @@
         setTimeout(verVentas, 500);
     }
 
-    // FUNCIÓN FINAL: ANULAR VENTA (BORRA DE DB Y ACTUALIZA PANTALLA)
     async function anularVenta(ventaId, nombreProducto, boton) {
         if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe borrará del historial y se devolverá al stock.`)) return;
 
-        // Efecto visual: deshabilitar la fila
         const fila = boton.closest('li');
         fila.style.opacity = '0.4';
         fila.style.pointerEvents = 'none';
 
-        // 1. Intentar borrar de Supabase (requiere política DELETE habilitada)
         const { error: errorBorrado } = await client
             .from("ventas")
             .delete()
@@ -187,16 +212,13 @@
             return;
         }
 
-        // 2. Reponer Stock
         const { data: prod } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
         if (prod) {
             await client.from("productos").update({ stock: prod.stock + 1 }).eq("id", prod.id);
         }
 
-        // 3. Recargar datos
         await cargarProductos();
         await verVentas();
-        alert("Venta anulada con éxito.");
     }
 
     async function reponerStock(id, nombre, stockActual, precioActual) {
