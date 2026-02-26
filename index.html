@@ -47,7 +47,6 @@
         }
         .btn-venta:hover { background-color: #21618c; }
 
-        /* BOTÓN REPONER (Nuevo) */
         .btn-reponer {
             background-color: #f39c12;
             margin-left: 5px;
@@ -166,30 +165,39 @@
                 <div><strong>${p.nombre}</strong> - $${p.precio} | Stock: ${p.stock} ${etiquetaStock}</div>
                 <div>
                     <button class="btn-venta" onclick="vender(${p.id})">Vender</button>
-                    <button class="btn-reponer" onclick="reponerStock(${p.id}, '${p.nombre}', ${p.stock})">Reposición</button>
+                    <button class="btn-reponer" onclick="reponerStock(${p.id}, '${p.nombre}', ${p.stock}, ${p.precio})">Reponer</button>
                 </div>
             `
             listaUI.appendChild(item)
         })
     }
 
-    // FUNCIÓN PARA REPONER STOCK
-    async function reponerStock(id, nombre, stockActual) {
-        const cantidad = prompt(`¿Cuántas unidades de "${nombre}" vas a sumar al stock actual (${stockActual})?`, "0");
+    // FUNCIÓN PARA REPONER STOCK Y ACTUALIZAR PRECIO
+    async function reponerStock(id, nombre, stockActual, precioActual) {
+        // 1. Preguntar cantidad
+        const cantidadStr = prompt(`REPOSICIÓN DE "${nombre}"\n\n¿Cuántas unidades vas a SUMAR al stock?`, "0");
+        if (cantidadStr === null || cantidadStr === "" || isNaN(cantidadStr)) return;
         
-        if (cantidad === null || cantidad === "" || isNaN(cantidad)) return;
+        const cantidadASumar = parseInt(cantidadStr);
+        const nuevoStock = stockActual + cantidadASumar;
 
-        const nuevaCantidad = stockActual + parseInt(cantidad);
+        // 2. Preguntar precio
+        const precioStr = prompt(`NUEVO PRECIO PARA "${nombre}"\n\nPrecio actual: $${precioActual}\n(Deja el mismo o escribe el nuevo):`, precioActual);
+        if (precioStr === null || precioStr === "" || isNaN(precioStr)) return;
+        
+        const nuevoPrecio = parseFloat(precioStr);
 
-        if (nuevaCantidad < 0) return alert("El stock no puede quedar en negativo");
-
+        // 3. Actualizar en Supabase
         const { error } = await client
             .from("productos")
-            .update({ stock: nuevaCantidad })
+            .update({ 
+                stock: nuevoStock, 
+                precio: nuevoPrecio 
+            })
             .eq("id", id);
 
         if (error) {
-            alert("Error al actualizar stock");
+            alert("Error al actualizar el producto");
         } else {
             cargarProductos();
         }
