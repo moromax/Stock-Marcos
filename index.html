@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Ventas - Stock</title>
+    <title>Sistema de Ventas - Stock Marcos V2</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -51,6 +51,7 @@
             margin-left: 5px;
         }
 
+        /* BOTÓN ANULAR (Estilo Pastilla Rojo) */
         .btn-anular {
             background-color: #e74c3c;
             color: white;
@@ -164,32 +165,38 @@
         setTimeout(verVentas, 500);
     }
 
-    // FUNCIÓN CORREGIDA: ANULAR VENTA (BORRA Y REPONE)
-    async function anularVenta(ventaId, nombreProducto) {
-        if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe eliminará de la lista y se devolverá 1 unidad al stock.`)) return;
+    // FUNCIÓN FINAL: ANULAR VENTA (BORRA DE DB Y ACTUALIZA PANTALLA)
+    async function anularVenta(ventaId, nombreProducto, boton) {
+        if (!confirm(`¿Anular venta de "${nombreProducto}"?\nSe borrará del historial y se devolverá al stock.`)) return;
 
-        // 1. Borrar la venta primero
+        // Efecto visual: deshabilitar la fila
+        const fila = boton.closest('li');
+        fila.style.opacity = '0.4';
+        fila.style.pointerEvents = 'none';
+
+        // 1. Intentar borrar de Supabase (requiere política DELETE habilitada)
         const { error: errorBorrado } = await client
             .from("ventas")
             .delete()
             .eq("id", ventaId);
 
         if (errorBorrado) {
-            alert("Error al eliminar la venta de la base de datos.");
+            alert("Error al borrar: Asegúrate de habilitar el permiso DELETE en Supabase.");
+            fila.style.opacity = '1';
+            fila.style.pointerEvents = 'auto';
             return;
         }
 
-        // 2. Si se borró, buscar producto para devolver stock
+        // 2. Reponer Stock
         const { data: prod } = await client.from("productos").select("*").eq("nombre", nombreProducto).single();
-        
         if (prod) {
             await client.from("productos").update({ stock: prod.stock + 1 }).eq("id", prod.id);
         }
 
-        // 3. Refrescar ambas listas inmediatamente
+        // 3. Recargar datos
         await cargarProductos();
         await verVentas();
-        alert("Venta anulada correctamente.");
+        alert("Venta anulada con éxito.");
     }
 
     async function reponerStock(id, nombre, stockActual, precioActual) {
@@ -231,7 +238,7 @@
                     <strong>${v.nombre_producto}</strong> - $${v.precio} 
                     <span class="fecha-tag">🕒 ${hora}</span>
                 </div>
-                <button class="btn-anular" onclick="anularVenta(${v.id}, '${v.nombre_producto}')">Anular Venta</button>
+                <button class="btn-anular" onclick="anularVenta(${v.id}, '${v.nombre_producto}', this)">Anular Venta</button>
             `;
             lista.appendChild(item);
         });
