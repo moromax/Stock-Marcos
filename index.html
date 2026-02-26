@@ -144,33 +144,34 @@
 
     // 2. Cargar Productos
     async function cargarProductos() {
-        const { data, error } = await client
-            .from("productos")
-            .select("*")
-            .order("nombre", { ascending: true })
+    const { data, error } = await client
+        .from("productos")
+        .select("*")
+        .order("nombre", { ascending: true })
 
-        if (error) {
-            console.error("Error al cargar:", error.message)
-            return
-        }
-
-        const lista = document.getElementById("listaProductos")
-        lista.innerHTML = ""
-
-        data.forEach(p => {
-            const item = document.createElement("li")
-            const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Stock Bajo)</span>' : ''
-            
-            item.innerHTML = `
-                <div>
-                    <strong>${p.nombre}</strong> - $${p.precio} | 
-                    <span>Stock: ${p.stock}</span> ${esBajoStock}
-                </div>
-                <button class="btn-venta" onclick="vender(${p.id}, '${p.nombre}', ${p.precio})">Vender</button>
-            `
-            lista.appendChild(item)
-        })
+    if (error) {
+        console.error("Error al cargar:", error.message)
+        return
     }
+
+    const lista = document.getElementById("listaProductos")
+    lista.innerHTML = ""
+
+    data.forEach(p => {
+        const item = document.createElement("li")
+        const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Stock Bajo)</span>' : ''
+        
+        // CAMBIO AQUÍ: Solo pasamos p.id a la función vender
+        item.innerHTML = `
+            <div>
+                <strong>${p.nombre}</strong> - $${p.precio} | 
+                <span>Stock: ${p.stock}</span> ${esBajoStock}
+            </div>
+            <button class="btn-venta" onclick="vender(${p.id})">Vender</button>
+        `
+        lista.appendChild(item)
+    })
+}
 
     // 3. Proceso de Venta
     async function vender(id, nombre, precio) {
