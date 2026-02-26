@@ -237,62 +237,69 @@
 
     // 4. Ver Ventas Filtradas por Fecha
     async function verVentas() {
-        const fechaSeleccionada = document.getElementById("filtroFecha").value;
-        let query = client.from("ventas").select("*");
+    console.log("Actualizando ventas..."); // Para ver en F12 que el botón responde
+    const filtro = document.getElementById("filtroFecha").value;
+    const lista = document.getElementById("listaVentas");
+    
+    // Si no hay fecha seleccionada, no hacemos nada
+    if (!filtro) return;
 
-        if (fechaSeleccionada) {
-            // Filtramos desde las 00:00 hasta las 23:59 del día elegido
-            const inicio = `${fechaSeleccionada}T00:00:00.000Z`;
-            const fin = `${fechaSeleccionada}T23:59:59.999Z`;
-            query = query.gte("created_at", inicio).lte("created_at", fin);
-        }
+    // 1. Crear el rango de búsqueda para el día elegido
+    // Buscamos desde el inicio del día hasta el final del día
+    const inicioDia = `${filtro}T00:00:00.000Z`;
+    const finDia = `${filtro}T23:59:59.999Z`;
 
-        const { data, error } = await query.order("created_at", { ascending: false });
+    // 2. Consultar a Supabase
+    const { data, error } = await client
+        .from("ventas")
+        .select("*")
+        .gte("created_at", inicioDia)
+        .lte("created_at", finDia)
+        .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error("Error ventas:", error.message);
-            return;
-        }
-
-        const lista = document.getElementById("listaVentas");
-        lista.innerHTML = "";
-
-        let totalDia = 0;
-
-        if (data.length === 0) {
-            lista.innerHTML = "<li>No hay ventas para este día.</li>";
-            return;
-        }
-
-        data.forEach(v => {
-            const item = document.createElement("li");
-            const hora = v.created_at ? new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
-            const precio = parseFloat(v.precio) || 0;
-            totalDia += precio;
-
-            item.innerHTML = `
-                <span><strong>${v.nombre_producto}</strong> - $${precio}</span>
-                <span class="fecha-tag">🕒 ${hora}</span>
-            `;
-            lista.appendChild(item);
-        });
-
-        // Fila de Total
-        const totalItem = document.createElement("li");
-        totalItem.className = "total-dia";
-        totalItem.innerHTML = `<span>TOTAL DE VENTAS:</span> <span>$${totalDia.toFixed(2)}</span>`;
-        lista.appendChild(totalItem);
+    if (error) {
+        console.error("Error en Supabase:", error.message);
+        alert("Error al cargar ventas: " + error.message);
+        return;
     }
 
-    // Inicialización al cargar la ventana
-    window.onload = () => {
-        // Poner fecha de hoy por defecto en el filtro
-        const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById("filtroFecha").value = hoy;
+    // 3. Limpiar y Dibujar la lista
+    lista.innerHTML = "";
+    let totalDia = 0;
+
+    if (!data || data.length === 0) {
+        lista.innerHTML = "<li style='color:gray'>No hay ventas registradas en este día.</li>";
+        return;
+    }
+
+    data.forEach(v => {
+        const item = document.createElement("li");
         
-        cargarProductos();
-        verVentas();
-    }
+        // Formatear la hora localmente
+        const hora = v.created_at 
+            ? new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+            : "--:--";
+            
+        const precio = parseFloat(v.precio) || 0;
+        totalDia += precio;
+
+        item.innerHTML = `
+            <span><strong>${v.nombre_producto}</strong> - $${precio}</span>
+            <span class="fecha-tag">🕒 ${hora}</span>
+        `;
+        lista.appendChild(item);
+    });
+
+    // 4. Agregar el total al final
+    const totalItem = document.createElement("li");
+    totalItem.className = "total-dia";
+    totalItem.style.background = "#2c3e50";
+    totalItem.style.color = "white";
+    totalItem.style.padding = "10px";
+    totalItem.style.marginTop = "10px";
+    totalItem.innerHTML = `<span>TOTAL DEL DÍA:</span> <span>$${totalDia.toFixed(2)}</span>`;
+    lista.appendChild(totalItem);
+}
 </script>
 
 </body>
