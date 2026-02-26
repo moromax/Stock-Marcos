@@ -35,13 +35,26 @@
         }
         button:hover { background-color: #219150; }
         .btn-venta { background-color: #2980b9; margin-left: 10px; padding: 5px 10px; }
+        
+        /* Buscador */
+        .search-container {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3498db;
+            border-radius: 25px;
+            outline: none;
+        }
+
         ul { background: white; padding: 20px; border-radius: 8px; list-style: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         li { padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         li:last-child { border-bottom: none; }
         
-        /* Etiquetas de Stock */
         .badge-danger { color: #e74c3c; font-weight: bold; margin-left: 5px; }
-        
         .fecha-tag { font-size: 0.85em; background: #ecf0f1; padding: 2px 8px; border-radius: 4px; color: #7f8c8d; }
         .total-dia {
             background: #2c3e50 !important;
@@ -70,6 +83,9 @@
     <hr>
 
     <h2>Inventario</h2>
+    <div class="search-container">
+        <input type="text" id="buscador" class="search-input" placeholder="🔍 Buscar producto por nombre..." onkeyup="filtrarProductos()">
+    </div>
     <ul id="listaProductos"></ul>
 
     <hr>
@@ -88,6 +104,9 @@
     const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
     const client = supabase.createClient(supabaseUrl, supabaseKey)
 
+    // Variable global para guardar los productos y filtrar sin llamar a la DB cada vez
+    let productosLocales = [];
+
     async function agregarProducto() {
         const nombre = document.getElementById("nombre").value
         const precio = parseFloat(document.getElementById("precio").value)
@@ -101,14 +120,21 @@
     }
 
     async function cargarProductos() {
-        const { data } = await client.from("productos").select("*").order("nombre", { ascending: true })
-        const lista = document.getElementById("listaProductos")
-        lista.innerHTML = ""
+        const { data, error } = await client.from("productos").select("*").order("nombre", { ascending: true })
+        if (error) return console.error(error);
         
-        data.forEach(p => {
+        productosLocales = data; // Guardamos en la variable local
+        renderizarProductos(productosLocales);
+    }
+
+    // Función que dibuja los productos en el HTML
+    function renderizarProductos(listaParaMostrar) {
+        const listaUI = document.getElementById("listaProductos")
+        listaUI.innerHTML = ""
+        
+        listaParaMostrar.forEach(p => {
             const item = document.createElement("li")
             
-            // LÓGICA DE ETIQUETAS DE STOCK
             let etiquetaStock = '';
             if (p.stock === 0) {
                 etiquetaStock = '<span class="badge-danger"> (Sin Stock)</span>';
@@ -120,13 +146,22 @@
                 <div><strong>${p.nombre}</strong> - $${p.precio} | Stock: ${p.stock} ${etiquetaStock}</div>
                 <button class="btn-venta" onclick="vender(${p.id})">Vender</button>
             `
-            lista.appendChild(item)
+            listaUI.appendChild(item)
         })
+    }
+
+    // FUNCIÓN DEL BUSCADOR
+    function filtrarProductos() {
+        const texto = document.getElementById("buscador").value.toLowerCase();
+        const productosFiltrados = productosLocales.filter(p => 
+            p.nombre.toLowerCase().includes(texto)
+        );
+        renderizarProductos(productosFiltrados);
     }
 
     async function vender(id) {
         const { data: p } = await client.from("productos").select("*").eq("id", id).single()
-        if (p.stock <= 0) return alert("No puedes vender un producto sin stock")
+        if (p.stock <= 0) return alert("No hay stock disponible");
 
         const nuevoStock = p.stock - 1
         await client.from("productos").update({ stock: nuevoStock }).eq("id", id)
@@ -136,11 +171,8 @@
             precio: p.precio
         })
 
-        if (nuevoStock === 0) {
-            alert("¡Atención! " + p.nombre + " se ha quedado sin existencias.");
-        } else if (nuevoStock <= p.stock_minimo) {
-            alert("Stock bajo de: " + p.nombre);
-        }
+        if (nuevoStock === 0) alert("¡Atención! " + p.nombre + " se quedó sin stock.");
+        else if (nuevoStock <= p.stock_minimo) alert("Stock bajo de: " + p.nombre);
 
         await cargarProductos()
         setTimeout(verVentas, 300)
@@ -149,7 +181,6 @@
     async function verVentas() {
         const filtro = document.getElementById("filtroFecha").value;
         const lista = document.getElementById("listaVentas");
-
         if (!filtro) return;
 
         const inicioDia = `${filtro}T00:00:00.000Z`;
@@ -162,13 +193,13 @@
             .lte("created_at", finDia)
             .order("created_at", { ascending: false });
 
-        if (error) return console.error(error.message);
+        if (error) return console.error(error);
 
         lista.innerHTML = "";
         let total = 0;
 
         if (data.length === 0) {
-            lista.innerHTML = "<li style='color:gray'>No hay ventas registradas para este día.</li>";
+            lista.innerHTML = "<li style='color:gray'>No hay ventas este día.</li>";
             return;
         }
 
