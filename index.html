@@ -111,8 +111,9 @@ const item = document.createElement("li")
 
 item.innerHTML = `
 ${p.nombre} - $${p.precio} - Stock: ${p.stock}
-<button onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock},${p.stock_minimo})">Vender</button>
-`
+<button onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock_minimo})">
+
+
 
 lista.appendChild(item)
 
