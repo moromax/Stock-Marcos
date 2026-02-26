@@ -24,6 +24,8 @@ margin-left:10px;
 
 <h1>Sistema de Stock</h1>
 
+<h2 id="ventasHoy">Ventas hoy: $0</h2>
+
 <h2>Agregar producto</h2>
 
 <input id="nombre" placeholder="Nombre producto">
@@ -33,6 +35,8 @@ margin-left:10px;
 <button onclick="agregarProducto()">Guardar</button>
 
 <hr>
+  
+<input id="busqueda" placeholder="Buscar producto..." oninput="cargarProductos()">
 
 <h2>Productos</h2>
 
@@ -83,26 +87,34 @@ cargarProductos()
 
 async function cargarProductos(){
 
-const { data } = await client
+const { data, error } = await client
 .from("productos")
 .select("*")
+.order("id", {ascending:true})
 
 const lista = document.getElementById("listaProductos")
 lista.innerHTML = ""
 
 data.forEach(p => {
 
+let alerta = ""
+
+if(p.stock <= p.stock_minimo){
+alerta = " ⚠ STOCK BAJO"
+}
+
 const item = document.createElement("li")
 
 item.innerHTML =
-`${p.nombre} - $${p.precio} - stock: ${p.stock}
-<button onclick='venderProducto(${JSON.stringify(p)})'>Vender</button>`
+`${p.nombre} - $${p.precio} - stock: ${p.stock}${alerta}
+<button onclick="venderProducto(${p.id}, ${p.precio})">Vender</button>`
 
 lista.appendChild(item)
 
 })
 
 }
+
 
 
 
@@ -162,6 +174,27 @@ lista.appendChild(item)
 
 }
 
+async function calcularVentasHoy(){
+
+const hoy = new Date()
+hoy.setHours(0,0,0,0)
+
+const { data } = await client
+.from("ventas")
+.select("precio, fecha")
+
+let total = 0
+
+data.forEach(v=>{
+if(new Date(v.fecha) >= hoy){
+total += v.precio
+}
+})
+
+document.getElementById("ventasHoy").textContent =
+"Ventas hoy: $" + total
+
+}
 
 
 cargarProductos()
