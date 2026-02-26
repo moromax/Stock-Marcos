@@ -122,18 +122,23 @@ lista.appendChild(item)
 
 
 
-async function vender(id,nombre,precio,stock,stock_minimo){
+async function vender(id,nombre,precio,stock_minimo){
 
-if(stock <= 0){
+// traer producto actualizado desde la base
+const { data: producto } = await client
+.from("productos")
+.select("*")
+.eq("id",id)
+.single()
+
+if(producto.stock <= 0){
 
 alert("No hay stock")
-
 return
 
 }
 
-const nuevoStock = stock - 1
-
+const nuevoStock = producto.stock - 1
 
 await client
 .from("productos")
@@ -156,6 +161,12 @@ if(nuevoStock <= stock_minimo){
 alert("⚠ STOCK BAJO de " + nombre)
 
 }
+
+cargarProductos()
+verVentas()
+
+}
+
 
 
 
