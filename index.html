@@ -64,7 +64,7 @@
         }
 
         li {
-            padding: 10px 0;
+            padding: 12px 15px;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
@@ -93,6 +93,7 @@
             font-weight: bold;
             font-size: 1.1em;
             margin-top: 15px;
+            border-radius: 0 0 8px 8px;
         }
     </style>
 </head>
@@ -119,7 +120,7 @@
 
     <div class="form-group">
         <h2>Historial de Ventas</h2>
-        <label>Filtrar por día: </label>
+        <label>Seleccionar día: </label>
         <input type="date" id="filtroFecha" onchange="verVentas()">
         <button onclick="verVentas()" style="background:#7f8c8d">Actualizar</button>
     </div>
@@ -139,20 +140,15 @@
         const stock = parseInt(document.getElementById("stock").value)
         const stock_minimo = parseInt(document.getElementById("stock_minimo").value)
 
-        if(!nombre || isNaN(precio)) return alert("Completa los datos correctamente");
+        if(!nombre || isNaN(precio)) return alert("Completa los datos");
 
         const { error } = await client
             .from("productos")
-            .insert({
-                nombre: nombre,
-                precio: precio,
-                stock: stock,
-                stock_minimo: stock_minimo
-            })
+            .insert({ nombre, precio, stock, stock_minimo })
 
         if (error) {
-            console.error("Error al insertar:", error.message)
-            alert("Error: " + error.message)
+            console.error(error);
+            alert("Error al agregar");
         } else {
             document.getElementById("nombre").value = ""
             document.getElementById("precio").value = ""
@@ -162,17 +158,14 @@
         }
     }
 
-    // 2. Cargar Productos (Inventario)
+    // 2. Cargar Inventario
     async function cargarProductos() {
         const { data, error } = await client
             .from("productos")
             .select("*")
             .order("nombre", { ascending: true })
 
-        if (error) {
-            console.error("Error al cargar:", error.message)
-            return
-        }
+        if (error) return console.error(error);
 
         const lista = document.getElementById("listaProductos")
         lista.innerHTML = ""
@@ -181,7 +174,6 @@
             const item = document.createElement("li")
             const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Stock Bajo)</span>' : ''
             
-            // Pasamos solo el ID para evitar errores con comillas en el nombre
             item.innerHTML = `
                 <div>
                     <strong>${p.nombre}</strong> - $${p.precio} | 
@@ -193,113 +185,107 @@
         })
     }
 
-    // 3. Proceso de Venta (Seguro contra caracteres especiales)
+    // 3. Vender (Corregido para mostrar la venta rápido)
     async function vender(id) {
-        // Obtenemos datos actualizados del producto
         const { data: producto, error: errFetch } = await client
             .from("productos")
             .select("*")
             .eq("id", id)
             .single()
 
-        if (errFetch || !producto) return alert("No se pudo obtener el producto")
-
-        if (producto.stock <= 0) {
-            alert("No hay stock disponible de " + producto.nombre)
-            return
-        }
+        if (errFetch || !producto) return alert("Error al buscar producto");
+        if (producto.stock <= 0) return alert("No hay stock");
 
         const nuevoStock = producto.stock - 1
 
-        // Paso A: Actualizar Stock
-        const { error: errUpdate } = await client
-            .from("productos")
-            .update({ stock: nuevoStock })
-            .eq("id", id)
+        // A. Actualizamos stock
+        await client.from("productos").update({ stock: nuevoStock }).eq("id", id)
 
-        if (errUpdate) return alert("Error al actualizar stock")
-
-        // Paso B: Registrar Venta con los datos reales de la DB
-        await client
+        // B. Registramos venta (usamos AWAIT para esperar que termine)
+        const { error: errVenta } = await client
             .from("ventas")
             .insert({
                 nombre_producto: producto.nombre,
                 precio: producto.precio
             })
 
-        if (nuevoStock <= producto.stock_minimo) {
-            alert("⚠ STOCK BAJO de " + producto.nombre)
+        if (errVenta) {
+            console.error("Error al registrar venta:", errVenta);
         }
 
-        cargarProductos()
-        verVentas()
+        if (nuevoStock <= producto.stock_minimo) {
+            alert("⚠ STOCK BAJO de " + producto.nombre);
+        }
+
+        // C. REFRESCAR TODO
+        await cargarProductos();
+        await verVentas(); // Esperamos a que cargue la lista actualizada
     }
 
-    // 4. Ver Ventas Filtradas por Fecha
+    // 4. Ver Ventas (Mejorado para detectar ventas de hoy)
     async function verVentas() {
-    console.log("Actualizando ventas..."); // Para ver en F12 que el botón responde
-    const filtro = document.getElementById("filtroFecha").value;
-    const lista = document.getElementById("listaVentas");
-    
-    // Si no hay fecha seleccionada, no hacemos nada
-    if (!filtro) return;
+        const filtro = document.getElementById("filtroFecha").value;
+        const lista = document.getElementById("listaVentas");
 
-    // 1. Crear el rango de búsqueda para el día elegido
-    // Buscamos desde el inicio del día hasta el final del día
-    const inicioDia = `${filtro}T00:00:00.000Z`;
-    const finDia = `${filtro}T23:59:59.999Z`;
+        if (!filtro) return;
 
-    // 2. Consultar a Supabase
-    const { data, error } = await client
-        .from("ventas")
-        .select("*")
-        .gte("created_at", inicioDia)
-        .lte("created_at", finDia)
-        .order("created_at", { ascending: false });
+        // Rango de fechas local (para que no falle por zona horaria UTC)
+        const inicioDia = `${filtro}T00:00:00`;
+        const finDia = `${filtro}T23:59:59`;
 
-    if (error) {
-        console.error("Error en Supabase:", error.message);
-        alert("Error al cargar ventas: " + error.message);
-        return;
+        const { data, error } = await client
+            .from("ventas")
+            .select("*")
+            .gte("created_at", inicioDia)
+            .lte("created_at", finDia)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        lista.innerHTML = "";
+        let totalDia = 0;
+
+        if (!data || data.length === 0) {
+            lista.innerHTML = "<li style='color:gray'>No hay ventas registradas este día.</li>";
+            return;
+        }
+
+        data.forEach(v => {
+            const item = document.createElement("li");
+            const hora = v.created_at ? new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
+            const precio = parseFloat(v.precio) || 0;
+            totalDia += precio;
+
+            item.innerHTML = `
+                <span><strong>${v.nombre_producto}</strong> - $${precio}</span>
+                <span class="fecha-tag">🕒 ${hora}</span>
+            `;
+            lista.appendChild(item);
+        });
+
+        const totalItem = document.createElement("li");
+        totalItem.className = "total-dia";
+        totalItem.innerHTML = `<span>TOTAL DEL DÍA:</span> <span>$${totalDia.toFixed(2)}</span>`;
+        lista.appendChild(totalItem);
     }
 
-    // 3. Limpiar y Dibujar la lista
-    lista.innerHTML = "";
-    let totalDia = 0;
-
-    if (!data || data.length === 0) {
-        lista.innerHTML = "<li style='color:gray'>No hay ventas registradas en este día.</li>";
-        return;
-    }
-
-    data.forEach(v => {
-        const item = document.createElement("li");
+    // Inicialización con fecha local
+    window.onload = () => {
+        // Obtener fecha local en formato YYYY-MM-DD
+        const ahora = new Date();
+        const anio = ahora.getFullYear();
+        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dia = String(ahora.getDate()).padStart(2, '0');
+        const hoy = `${anio}-${mes}-${dia}`;
         
-        // Formatear la hora localmente
-        const hora = v.created_at 
-            ? new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-            : "--:--";
-            
-        const precio = parseFloat(v.precio) || 0;
-        totalDia += precio;
-
-        item.innerHTML = `
-            <span><strong>${v.nombre_producto}</strong> - $${precio}</span>
-            <span class="fecha-tag">🕒 ${hora}</span>
-        `;
-        lista.appendChild(item);
-    });
-
-    // 4. Agregar el total al final
-    const totalItem = document.createElement("li");
-    totalItem.className = "total-dia";
-    totalItem.style.background = "#2c3e50";
-    totalItem.style.color = "white";
-    totalItem.style.padding = "10px";
-    totalItem.style.marginTop = "10px";
-    totalItem.innerHTML = `<span>TOTAL DEL DÍA:</span> <span>$${totalDia.toFixed(2)}</span>`;
-    lista.appendChild(totalItem);
-}
+        document.getElementById("filtroFecha").value = hoy;
+        
+        cargarProductos();
+        verVentas();
+    }
 </script>
 
 </body>
