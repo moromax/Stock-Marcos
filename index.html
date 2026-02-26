@@ -14,14 +14,8 @@
             background: #f5f5f5;
             color: #333;
         }
-
         h1, h2 { color: #2c3e50; }
-
-        .container {
-            max-width: 850px;
-            margin: auto;
-        }
-
+        .container { max-width: 850px; margin: auto; }
         .form-group {
             background: white;
             padding: 20px;
@@ -29,14 +23,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-
-        input {
-            padding: 10px;
-            margin: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
+        input { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
         button {
             padding: 10px 15px;
             background-color: #27ae60;
@@ -44,49 +31,14 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.3s;
         }
-
         button:hover { background-color: #219150; }
-
-        .btn-venta {
-            background-color: #2980b9;
-            margin-left: 10px;
-            padding: 5px 10px;
-        }
-
-        ul {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            list-style: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        li {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
+        .btn-venta { background-color: #2980b9; margin-left: 10px; padding: 5px 10px; }
+        ul { background: white; padding: 20px; border-radius: 8px; list-style: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        li { padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         li:last-child { border-bottom: none; }
-
-        .badge-low {
-            color: #e74c3c;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        .fecha-tag {
-            font-size: 0.85em;
-            background: #ecf0f1;
-            padding: 2px 8px;
-            border-radius: 4px;
-            color: #7f8c8d;
-        }
-
+        .badge-low { color: #e74c3c; font-weight: bold; margin-left: 5px; }
+        .fecha-tag { font-size: 0.85em; background: #ecf0f1; padding: 2px 8px; border-radius: 4px; color: #7f8c8d; }
         .total-dia {
             background: #2c3e50 !important;
             color: white;
@@ -120,7 +72,7 @@
 
     <div class="form-group">
         <h2>Historial de Ventas</h2>
-        <label>Seleccionar día: </label>
+        <label>Día: </label>
         <input type="date" id="filtroFecha" onchange="verVentas()">
         <button onclick="verVentas()" style="background:#7f8c8d">Actualizar</button>
     </div>
@@ -128,165 +80,102 @@
 </div>
 
 <script>
-    // Configuración de Supabase
     const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
     const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
     const client = supabase.createClient(supabaseUrl, supabaseKey)
 
-    // 1. Agregar Producto
     async function agregarProducto() {
         const nombre = document.getElementById("nombre").value
         const precio = parseFloat(document.getElementById("precio").value)
         const stock = parseInt(document.getElementById("stock").value)
         const stock_minimo = parseInt(document.getElementById("stock_minimo").value)
 
-        if(!nombre || isNaN(precio)) return alert("Completa los datos");
+        if(!nombre || isNaN(precio)) return alert("Datos incompletos");
 
-        const { error } = await client
-            .from("productos")
-            .insert({ nombre, precio, stock, stock_minimo })
-
-        if (error) {
-            console.error(error);
-            alert("Error al agregar");
-        } else {
-            document.getElementById("nombre").value = ""
-            document.getElementById("precio").value = ""
-            document.getElementById("stock").value = ""
-            document.getElementById("stock_minimo").value = ""
-            cargarProductos()
-        }
+        await client.from("productos").insert({ nombre, precio, stock, stock_minimo })
+        cargarProductos()
     }
 
-    // 2. Cargar Inventario
     async function cargarProductos() {
-        const { data, error } = await client
-            .from("productos")
-            .select("*")
-            .order("nombre", { ascending: true })
-
-        if (error) return console.error(error);
-
+        const { data } = await client.from("productos").select("*").order("nombre", { ascending: true })
         const lista = document.getElementById("listaProductos")
         lista.innerHTML = ""
-
         data.forEach(p => {
             const item = document.createElement("li")
-            const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Stock Bajo)</span>' : ''
-            
+            const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Bajo Stock)</span>' : ''
             item.innerHTML = `
-                <div>
-                    <strong>${p.nombre}</strong> - $${p.precio} | 
-                    <span>Stock: ${p.stock}</span> ${esBajoStock}
-                </div>
+                <div><strong>${p.nombre}</strong> - $${p.precio} | Stock: ${p.stock} ${esBajoStock}</div>
                 <button class="btn-venta" onclick="vender(${p.id})">Vender</button>
             `
             lista.appendChild(item)
         })
     }
 
-    // 3. Vender (Corregido para mostrar la venta rápido)
     async function vender(id) {
-        const { data: producto, error: errFetch } = await client
-            .from("productos")
-            .select("*")
-            .eq("id", id)
-            .single()
+        const { data: p } = await client.from("productos").select("*").eq("id", id).single()
+        if (p.stock <= 0) return alert("Sin stock")
 
-        if (errFetch || !producto) return alert("Error al buscar producto");
-        if (producto.stock <= 0) return alert("No hay stock");
-
-        const nuevoStock = producto.stock - 1
-
-        // A. Actualizamos stock
+        const nuevoStock = p.stock - 1
         await client.from("productos").update({ stock: nuevoStock }).eq("id", id)
+        
+        // Insertamos y esperamos confirmación
+        const { error: errV } = await client.from("ventas").insert({
+            nombre_producto: p.nombre,
+            precio: p.precio
+        })
 
-        // B. Registramos venta (usamos AWAIT para esperar que termine)
-        const { error: errVenta } = await client
-            .from("ventas")
-            .insert({
-                nombre_producto: producto.nombre,
-                precio: producto.precio
-            })
+        if(errV) console.error("Error venta:", errV)
 
-        if (errVenta) {
-            console.error("Error al registrar venta:", errVenta);
-        }
+        if (nuevoStock <= p.stock_minimo) alert("Stock bajo: " + p.nombre)
 
-        if (nuevoStock <= producto.stock_minimo) {
-            alert("⚠ STOCK BAJO de " + producto.nombre);
-        }
-
-        // C. REFRESCAR TODO
-        await cargarProductos();
-        await verVentas(); // Esperamos a que cargue la lista actualizada
+        cargarProductos()
+        setTimeout(verVentas, 500) // Damos medio segundo a la DB para refrescar
     }
 
-    // 4. Ver Ventas (Mejorado para detectar ventas de hoy)
     async function verVentas() {
         const filtro = document.getElementById("filtroFecha").value;
         const lista = document.getElementById("listaVentas");
 
-        if (!filtro) return;
-
-        // Rango de fechas local (para que no falle por zona horaria UTC)
-        const inicioDia = `${filtro}T00:00:00`;
-        const finDia = `${filtro}T23:59:59`;
-
+        // IMPORTANTE: Para evitar líos de zona horaria, pedimos las ventas
+        // que COMIENCEN en la fecha elegida.
         const { data, error } = await client
             .from("ventas")
             .select("*")
-            .gte("created_at", inicioDia)
-            .lte("created_at", finDia)
+            .gte("created_at", `${filtro}T00:00:00`)
+            .lte("created_at", `${filtro}T23:59:59`)
             .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error(error);
-            return;
-        }
+        if (error) return console.error(error);
 
         lista.innerHTML = "";
-        let totalDia = 0;
+        let total = 0;
 
-        if (!data || data.length === 0) {
-            lista.innerHTML = "<li style='color:gray'>No hay ventas registradas este día.</li>";
+        if (data.length === 0) {
+            lista.innerHTML = "<li>No hay ventas este día.</li>";
             return;
         }
 
         data.forEach(v => {
             const item = document.createElement("li");
-            const hora = v.created_at ? new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
-            const precio = parseFloat(v.precio) || 0;
-            totalDia += precio;
-
-            item.innerHTML = `
-                <span><strong>${v.nombre_producto}</strong> - $${precio}</span>
-                <span class="fecha-tag">🕒 ${hora}</span>
-            `;
+            const hora = new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            total += parseFloat(v.precio);
+            item.innerHTML = `<span>${v.nombre_producto} - $${v.precio}</span> <span class="fecha-tag">${hora}</span>`;
             lista.appendChild(item);
         });
 
         const totalItem = document.createElement("li");
         totalItem.className = "total-dia";
-        totalItem.innerHTML = `<span>TOTAL DEL DÍA:</span> <span>$${totalDia.toFixed(2)}</span>`;
+        totalItem.innerHTML = `<span>TOTAL:</span> <span>$${total.toFixed(2)}</span>`;
         lista.appendChild(totalItem);
     }
 
-    // Inicialización con fecha local
     window.onload = () => {
-        // Obtener fecha local en formato YYYY-MM-DD
-        const ahora = new Date();
-        const anio = ahora.getFullYear();
-        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-        const dia = String(ahora.getDate()).padStart(2, '0');
-        const hoy = `${anio}-${mes}-${dia}`;
-        
+        // Fecha local hoy corregida
+        const hoy = new Date().toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD
         document.getElementById("filtroFecha").value = hoy;
-        
         cargarProductos();
         verVentas();
     }
 </script>
-
 </body>
 </html>
