@@ -174,47 +174,57 @@
 }
 
     // 3. Proceso de Venta
-    async function vender(id, nombre, precio) {
-        // Traer stock actual directamente de la DB para evitar errores de desfase
-        const { data: producto, error: errFetch } = await client
-            .from("productos")
-            .select("stock, stock_minimo")
-            .eq("id", id)
-            .single()
+   async function vender(id) {
+    // 1. Buscamos el producto por ID
+    const { data: producto, error: errFetch } = await client
+        .from("productos")
+        .select("nombre, precio, stock, stock_minimo") // Traemos columnas específicas
+        .eq("id", id)
+        .single()
 
-        if (errFetch || !producto) return alert("No se pudo obtener el stock")
-
-        if (producto.stock <= 0) {
-            alert("No hay stock disponible de " + nombre)
-            return
-        }
-
-        const nuevoStock = producto.stock - 1
-
-        // Actualizar Stock
-        const { error: errUpdate } = await client
-            .from("productos")
-            .update({ stock: nuevoStock })
-            .eq("id", id)
-
-        if (errUpdate) return alert("Error al actualizar stock")
-
-        // Registrar Venta
-        await client
-            .from("ventas")
-            .insert({
-                nombre_producto: nombre,
-                precio: precio
-            })
-
-        // Notificar si llegó al mínimo
-        if (nuevoStock <= producto.stock_minimo) {
-            alert("⚠ ATENCIÓN: El producto " + nombre + " ha alcanzado el nivel crítico de stock.")
-        }
-
-        cargarProductos()
-        verVentas()
+    if (errFetch || !producto) {
+        console.error("Error al buscar producto:", errFetch);
+        return;
     }
+
+    if (producto.stock <= 0) {
+        alert("No hay stock disponible de " + producto.nombre);
+        return;
+    }
+
+    const nuevoStock = producto.stock - 1;
+
+    // 2. Actualizar stock en la tabla 'productos'
+    const { error: errUpdate } = await client
+        .from("productos")
+        .update({ stock: nuevoStock })
+        .eq("id", id);
+
+    if (errUpdate) {
+        alert("Error al descontar stock");
+        return;
+    }
+
+    // 3. Registrar venta (IMPORTANTE: Verificamos que los datos no sean null)
+    const { error: errVenta } = await client
+        .from("ventas")
+        .insert({
+            nombre_producto: producto.nombre, // Usamos el nombre que vino de la DB
+            precio: producto.precio           // Usamos el precio que vino de la DB
+        });
+
+    if (errVenta) {
+        console.error("Error al registrar venta:", errVenta.message);
+    }
+
+    // Alerta de stock bajo
+    if (nuevoStock <= producto.stock_minimo) {
+        alert("⚠ ATENCIÓN: " + producto.nombre + " quedó con stock bajo: " + nuevoStock);
+    }
+
+    cargarProductos();
+    verVentas();
+}
 
     // 4. Ver Ventas
     async function verVentas() {
