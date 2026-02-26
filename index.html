@@ -99,7 +99,8 @@ data.forEach(p => {
 
 let alerta = ""
 
-if(p.stock <= p.stock_minimo){
+if(p.stock_minimo && p.stock <= p.stock_minimo){
+
 alerta = " ⚠ STOCK BAJO"
 }
 
