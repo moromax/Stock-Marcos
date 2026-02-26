@@ -65,8 +65,8 @@ border-radius:5px;
 
 <script>
 
-const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+const supabaseUrl = "TU_URL_SUPABASE"
+const supabaseKey = "TU_ANON_KEY"
 
 const client = supabase.createClient(supabaseUrl,supabaseKey)
 
@@ -200,98 +200,3 @@ cargarProductos()
 </body>
 </html>
 
-
-}
-
-
-
-
-async function venderProducto(id, precio){
-
-// 1 actualizar stock
-const { data: producto } = await client
-.from("productos")
-.select("*")
-.eq("id", id)
-.single()
-
-const nuevoStock = producto.stock - 1
-
-await client
-.from("productos")
-.update({ stock: nuevoStock })
-.eq("id", id)
-
-// 2 guardar venta
-await client
-.from("ventas")
-.insert([{
-nombre_producto: producto.nombre,
-precio: precio,
-fecha: new Date()
-}])
-
-// 3 recargar datos
-cargarProductos()
-verVentas()
-calcularVentasHoy()
-
-}
-
-
-
-
-async function verVentas(){
-
-const { data } = await client
-.from("ventas")
-.select("*")
-.order("fecha",{ascending:false})
-
-const lista = document.getElementById("listaVentas")
-
-lista.innerHTML=""
-
-data.forEach(v=>{
-
-const item=document.createElement("li")
-
-const fecha=new Date(v.fecha).toLocaleString()
-
-item.textContent=`${v.nombre_producto} - $${v.precio} - ${fecha}`
-
-lista.appendChild(item)
-
-})
-
-}
-
-async function calcularVentasHoy(){
-
-const hoy = new Date()
-hoy.setHours(0,0,0,0)
-
-const { data } = await client
-.from("ventas")
-.select("precio, fecha")
-
-let total = 0
-
-data.forEach(v=>{
-if(new Date(v.fecha) >= hoy){
-total += v.precio
-}
-})
-
-document.getElementById("ventasHoy").textContent =
-"Ventas hoy: $" + total
-
-}
-
-
-cargarProductos()
-
-</script>
-
-</body>
-</html>
