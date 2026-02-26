@@ -1,42 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Sistema de Stock</title>
+<title>Sistema de Ventas</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+
 body{
 font-family: Arial;
-max-width:700px;
-margin:auto;
+margin:40px;
+background:#f5f5f5;
+}
+
+h1{
+margin-bottom:20px;
+}
+
+input,button{
+padding:8px;
+margin:5px;
 }
 
 button{
-margin-left:10px;
+cursor:pointer;
 }
+
+ul{
+background:white;
+padding:20px;
+border-radius:5px;
+}
+
 </style>
 
 </head>
-
 <body>
 
-<h1>Sistema de Stock</h1>
-
-<h2 id="ventasHoy">Ventas hoy: $0</h2>
+<h1>Sistema de Ventas</h1>
 
 <h2>Agregar producto</h2>
 
 <input id="nombre" placeholder="Nombre producto">
 <input id="precio" type="number" placeholder="Precio">
 <input id="stock" type="number" placeholder="Stock">
+<input id="stock_minimo" type="number" placeholder="Stock mínimo">
 
-<button onclick="agregarProducto()">Guardar</button>
+<button onclick="agregarProducto()">Agregar</button>
 
 <hr>
-  
-<input id="busqueda" placeholder="Buscar producto..." oninput="cargarProductos()">
 
 <h2>Productos</h2>
 
@@ -46,20 +59,16 @@ margin-left:10px;
 
 <button onclick="verVentas()">Ver ventas</button>
 
-<h2>Historial de ventas</h2>
+<h2>Ventas</h2>
 
 <ul id="listaVentas"></ul>
-
 
 <script>
 
 const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
 const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
-const { createClient } = supabase
-const client = createClient(supabaseUrl, supabaseKey)
-
-console.log("Conectado a Supabase")
+const client = supabase.createClient(supabaseUrl,supabaseKey)
 
 
 
@@ -68,16 +77,16 @@ async function agregarProducto(){
 const nombre = document.getElementById("nombre").value
 const precio = document.getElementById("precio").value
 const stock = document.getElementById("stock").value
+const stock_minimo = document.getElementById("stock_minimo").value
 
 await client
 .from("productos")
-.insert([
-{
+.insert({
 nombre:nombre,
 precio:precio,
-stock:stock
-}
-])
+stock:stock,
+stock_minimo:stock_minimo
+})
 
 cargarProductos()
 
@@ -87,32 +96,110 @@ cargarProductos()
 
 async function cargarProductos(){
 
-const { data, error } = await client
+const { data } = await client
 .from("productos")
 .select("*")
-.order("nombre", {ascending:true})
+.order("nombre",{ascending:true})
 
 const lista = document.getElementById("listaProductos")
-lista.innerHTML = ""
 
-data.forEach(p => {
+lista.innerHTML=""
 
-let alerta = ""
-
-if(p.stock_minimo && p.stock <= p.stock_minimo){
-
-alerta = " ⚠ STOCK BAJO"
-}
+data.forEach(p=>{
 
 const item = document.createElement("li")
 
-item.innerHTML =
-`${p.nombre} - $${p.precio} - stock: ${p.stock}${alerta}
-<button onclick="venderProducto(${p.id}, ${p.precio})">Vender</button>`
+item.innerHTML = `
+${p.nombre} - $${p.precio} - Stock: ${p.stock}
+<button onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock},${p.stock_minimo})">Vender</button>
+`
 
 lista.appendChild(item)
 
 })
+
+}
+
+
+
+async function vender(id,nombre,precio,stock,stock_minimo){
+
+if(stock <= 0){
+
+alert("No hay stock")
+
+return
+
+}
+
+const nuevoStock = stock - 1
+
+
+await client
+.from("productos")
+.update({stock:nuevoStock})
+.eq("id",id)
+
+
+
+await client
+.from("ventas")
+.insert({
+nombre_producto:nombre,
+precio:precio
+})
+
+
+
+if(nuevoStock <= stock_minimo){
+
+alert("⚠ STOCK BAJO de " + nombre)
+
+}
+
+
+
+cargarProductos()
+verVentas()
+
+}
+
+
+
+async function verVentas(){
+
+const { data } = await client
+.from("ventas")
+.select("*")
+.order("fecha",{ascending:false})
+
+const lista = document.getElementById("listaVentas")
+
+lista.innerHTML=""
+
+data.forEach(v=>{
+
+const item = document.createElement("li")
+
+const fecha = new Date(v.fecha).toLocaleString()
+
+item.textContent = `${v.nombre_producto} - $${v.precio} - ${fecha}`
+
+lista.appendChild(item)
+
+})
+
+}
+
+
+
+cargarProductos()
+
+</script>
+
+</body>
+</html>
+
 
 }
 
