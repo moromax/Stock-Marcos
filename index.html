@@ -90,7 +90,7 @@ async function cargarProductos(){
 const { data, error } = await client
 .from("productos")
 .select("*")
-.order("id", {ascending:true})
+.order("nombre", {ascending:true})
 
 const lista = document.getElementById("listaProductos")
 lista.innerHTML = ""
