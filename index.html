@@ -24,17 +24,33 @@
             margin-bottom: 20px;
         }
         input { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Botones generales */
         button {
             padding: 10px 15px;
             background-color: #27ae60;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             transition: 0.3s;
         }
-        button:hover { background-color: #219150; }
-        .btn-venta { background-color: #2980b9; margin-left: 10px; padding: 5px 10px; }
+        button:hover { background-color: #219150; transform: translateY(-1px); }
+
+        /* BOTÓN VENDER (Actualizado) */
+        .btn-venta { 
+            background-color: #2980b9; 
+            margin-left: 10px; 
+            padding: 10px 22px; /* Un poco más grandes */
+            border-radius: 50px; /* Bordes redondeados full */
+            font-weight: 600;
+            font-size: 0.95em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-venta:hover {
+            background-color: #21618c;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
         
         /* Buscador */
         .search-container {
@@ -104,7 +120,6 @@
     const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
     const client = supabase.createClient(supabaseUrl, supabaseKey)
 
-    // Variable global para guardar los productos y filtrar sin llamar a la DB cada vez
     let productosLocales = [];
 
     async function agregarProducto() {
@@ -123,11 +138,10 @@
         const { data, error } = await client.from("productos").select("*").order("nombre", { ascending: true })
         if (error) return console.error(error);
         
-        productosLocales = data; // Guardamos en la variable local
+        productosLocales = data;
         renderizarProductos(productosLocales);
     }
 
-    // Función que dibuja los productos en el HTML
     function renderizarProductos(listaParaMostrar) {
         const listaUI = document.getElementById("listaProductos")
         listaUI.innerHTML = ""
@@ -150,7 +164,6 @@
         })
     }
 
-    // FUNCIÓN DEL BUSCADOR
     function filtrarProductos() {
         const texto = document.getElementById("buscador").value.toLowerCase();
         const productosFiltrados = productosLocales.filter(p => 
