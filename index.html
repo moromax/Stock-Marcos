@@ -118,34 +118,38 @@ lista.appendChild(item)
 
 
 
-async function venderProducto(producto){
+async function venderProducto(id, precio){
 
-if(producto.stock <= 0){
-alert("No hay stock")
-return
-}
+// 1 actualizar stock
+const { data: producto } = await client
+.from("productos")
+.select("*")
+.eq("id", id)
+.single()
+
+const nuevoStock = producto.stock - 1
 
 await client
 .from("productos")
-.update({stock:producto.stock-1})
-.eq("id",producto.id)
+.update({ stock: nuevoStock })
+.eq("id", id)
 
-
-
+// 2 guardar venta
 await client
 .from("ventas")
-.insert([
-{
-producto_id:producto.id,
-nombre_producto:producto.nombre,
-precio:producto.precio
-}
-])
+.insert([{
+nombre_producto: producto.nombre,
+precio: precio,
+fecha: new Date()
+}])
 
-
+// 3 recargar datos
 cargarProductos()
+verVentas()
+calcularVentasHoy()
 
 }
+
 
 
 
