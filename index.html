@@ -1,215 +1,250 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Sistema de Ventas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ventas</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+            color: #333;
+        }
 
-body{
-font-family: Arial;
-margin:40px;
-background:#f5f5f5;
-}
+        h1, h2 { color: #2c3e50; }
 
-h1{
-margin-bottom:20px;
-}
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
 
-input,button{
-padding:8px;
-margin:5px;
-}
+        .form-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
 
-button{
-cursor:pointer;
-}
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
 
-ul{
-background:white;
-padding:20px;
-border-radius:5px;
-}
+        button {
+            padding: 10px 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
 
-</style>
+        button:hover { background-color: #219150; }
 
+        .btn-venta {
+            background-color: #2980b9;
+            margin-left: 10px;
+            padding: 5px 10px;
+        }
+
+        ul {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            list-style: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li:last-child { border-bottom: none; }
+
+        .badge-low {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
-<h1>Sistema de Ventas</h1>
+<div class="container">
+    <h1>Sistema de Ventas</h1>
 
-<h2>Agregar producto</h2>
+    <div class="form-group">
+        <h2>Agregar producto</h2>
+        <input id="nombre" placeholder="Nombre producto">
+        <input id="precio" type="number" placeholder="Precio">
+        <input id="stock" type="number" placeholder="Stock">
+        <input id="stock_minimo" type="number" placeholder="Stock mínimo">
+        <button onclick="agregarProducto()">Agregar</button>
+    </div>
 
-<input id="nombre" placeholder="Nombre producto">
-<input id="precio" type="number" placeholder="Precio">
-<input id="stock" type="number" placeholder="Stock">
-<input id="stock_minimo" type="number" placeholder="Stock mínimo">
+    <hr>
 
-<button onclick="agregarProducto()">Agregar</button>
+    <h2>Inventario</h2>
+    <ul id="listaProductos"></ul>
 
-<hr>
+    <hr>
 
-<h2>Productos</h2>
-
-<ul id="listaProductos"></ul>
-
-<hr>
-
-<button onclick="verVentas()">Ver ventas</button>
-
-<h2>Ventas</h2>
-
-<ul id="listaVentas"></ul>
+    <h2>Historial de Ventas</h2>
+    <button onclick="verVentas()" style="background:#7f8c8d">Actualizar Ventas</button>
+    <ul id="listaVentas"></ul>
+</div>
 
 <script>
-
-const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
-
-const client = supabase.createClient(supabaseUrl,supabaseKey)
-
-
-
-async function agregarProducto(){
-
-const nombre = document.getElementById("nombre").value
-const precio = document.getElementById("precio").value
-const stock = document.getElementById("stock").value
-const stock_minimo = document.getElementById("stock_minimo").value
-
-await client
-.from("productos")
-.insert({
-nombre:nombre,
-precio:precio,
-stock:stock,
-stock_minimo:stock_minimo
-})
-
-cargarProductos()
-
-}
-
-
-
-async function cargarProductos(){
-
-const { data } = await client
-.from("productos")
-.select("*")
-.order("nombre",{ascending:true})
-
-const lista = document.getElementById("listaProductos")
-
-lista.innerHTML=""
-
-data.forEach(p=>{
-
-const item = document.createElement("li")
-
-item.innerHTML = `
-${p.nombre} - $${p.precio} - Stock: ${p.stock}
-<button onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock_minimo})">
-`
-
-
-
-lista.appendChild(item)
-
-})
-
-}
-
-
-
-async function vender(id,nombre,precio,stock_minimo){
-
-// traer producto actualizado desde la base
-const { data: producto } = await client
-.from("productos")
-.select("*")
-.eq("id",id)
-.single()
-
-if(producto.stock <= 0){
-
-alert("No hay stock")
-return
-
-}
-
-const nuevoStock = producto.stock - 1
-
-await client
-.from("productos")
-.update({stock:nuevoStock})
-.eq("id",id)
-
-
-
-await client
-.from("ventas")
-.insert({
-nombre_producto:nombre,
-precio:precio
-})
-
-
-
-if(nuevoStock <= stock_minimo){
-
-alert("⚠ STOCK BAJO de " + nombre)
-
-}
-
-cargarProductos()
-verVentas()
-
-}
-
-
-
-
-cargarProductos()
-verVentas()
-
-}
-
-
-
-async function verVentas(){
-
-const { data } = await client
-.from("ventas")
-.select("*")
-.order("fecha",{ascending:false})
-
-const lista = document.getElementById("listaVentas")
-
-lista.innerHTML=""
-
-data.forEach(v=>{
-
-const item = document.createElement("li")
-
-const fecha = new Date(v.fecha).toLocaleString()
-
-item.textContent = `${v.nombre_producto} - $${v.precio} - ${fecha}`
-
-lista.appendChild(item)
-
-})
-
-}
-
-
-
-cargarProductos()
-
+    // Configuración
+    const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
+    const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+    const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+    // 1. Agregar Producto
+    async function agregarProducto() {
+        const nombre = document.getElementById("nombre").value
+        const precio = parseFloat(document.getElementById("precio").value)
+        const stock = parseInt(document.getElementById("stock").value)
+        const stock_minimo = parseInt(document.getElementById("stock_minimo").value)
+
+        if(!nombre || isNaN(precio)) return alert("Completa los datos correctamente");
+
+        const { error } = await client
+            .from("productos")
+            .insert({
+                nombre: nombre,
+                precio: precio,
+                stock: stock,
+                stock_minimo: stock_minimo
+            })
+
+        if (error) {
+            console.error("Error al insertar:", error.message)
+            alert("Error: " + error.message)
+        } else {
+            // Limpiar campos
+            document.getElementById("nombre").value = ""
+            document.getElementById("precio").value = ""
+            document.getElementById("stock").value = ""
+            document.getElementById("stock_minimo").value = ""
+            cargarProductos()
+        }
+    }
+
+    // 2. Cargar Productos
+    async function cargarProductos() {
+        const { data, error } = await client
+            .from("productos")
+            .select("*")
+            .order("nombre", { ascending: true })
+
+        if (error) {
+            console.error("Error al cargar:", error.message)
+            return
+        }
+
+        const lista = document.getElementById("listaProductos")
+        lista.innerHTML = ""
+
+        data.forEach(p => {
+            const item = document.createElement("li")
+            const esBajoStock = p.stock <= p.stock_minimo ? '<span class="badge-low"> (Stock Bajo)</span>' : ''
+            
+            item.innerHTML = `
+                <div>
+                    <strong>${p.nombre}</strong> - $${p.precio} | 
+                    <span>Stock: ${p.stock}</span> ${esBajoStock}
+                </div>
+                <button class="btn-venta" onclick="vender(${p.id}, '${p.nombre}', ${p.precio})">Vender</button>
+            `
+            lista.appendChild(item)
+        })
+    }
+
+    // 3. Proceso de Venta
+    async function vender(id, nombre, precio) {
+        // Traer stock actual directamente de la DB para evitar errores de desfase
+        const { data: producto, error: errFetch } = await client
+            .from("productos")
+            .select("stock, stock_minimo")
+            .eq("id", id)
+            .single()
+
+        if (errFetch || !producto) return alert("No se pudo obtener el stock")
+
+        if (producto.stock <= 0) {
+            alert("No hay stock disponible de " + nombre)
+            return
+        }
+
+        const nuevoStock = producto.stock - 1
+
+        // Actualizar Stock
+        const { error: errUpdate } = await client
+            .from("productos")
+            .update({ stock: nuevoStock })
+            .eq("id", id)
+
+        if (errUpdate) return alert("Error al actualizar stock")
+
+        // Registrar Venta
+        await client
+            .from("ventas")
+            .insert({
+                nombre_producto: nombre,
+                precio: precio
+            })
+
+        // Notificar si llegó al mínimo
+        if (nuevoStock <= producto.stock_minimo) {
+            alert("⚠ ATENCIÓN: El producto " + nombre + " ha alcanzado el nivel crítico de stock.")
+        }
+
+        cargarProductos()
+        verVentas()
+    }
+
+    // 4. Ver Ventas
+    async function verVentas() {
+        const { data, error } = await client
+            .from("ventas")
+            .select("*")
+            .order("id", { ascending: false }) // Se asume que el ID más alto es la venta más reciente
+
+        if (error) {
+            console.error("Error ventas:", error.message)
+            return
+        }
+
+        const lista = document.getElementById("listaVentas")
+        lista.innerHTML = ""
+
+        data.forEach(v => {
+            const item = document.createElement("li")
+            // Usamos v.created_at si Supabase lo genera por defecto, si no, lo ignoramos
+            const fecha = v.created_at ? new Date(v.created_at).toLocaleString() : ""
+            item.textContent = `${v.nombre_producto} - $${v.precio} - ${fecha}`
+            lista.appendChild(item)
+        })
+    }
+
+    // Inicialización
+    window.onload = () => {
+        cargarProductos()
+        verVentas()
+    }
 </script>
 
 </body>
 </html>
-
