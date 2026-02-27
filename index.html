@@ -1,263 +1,229 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Ventas - Stock Marcos V3</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Sistema de Stock</title>
 
-    <style>
-        :root {
-            --primary: #2c3e50;
-            --secondary: #34495e;
-            --accent: #3498db;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --light: #ecf0f1;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background: #f0f2f5;
-            color: #333;
-        }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        .container { max-width: 900px; margin: auto; }
+<style>
 
-        /* DASHBOARD STYLES */
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+body{
+background:#f5f5f5;
+}
 
-        .card-kpi {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            text-align: center;
-            border-bottom: 4px solid var(--accent);
-        }
+.sidebar{
+height:100vh;
+background:#343a40;
+color:white;
+}
 
-        .card-kpi h3 { margin: 0; font-size: 0.9em; color: #7f8c8d; text-transform: uppercase; }
-        .card-kpi p { margin: 10px 0 0; font-size: 1.8em; font-weight: bold; color: var(--primary); }
-        .kpi-alerta { border-bottom-color: var(--danger); }
-        .kpi-ventas { border-bottom-color: var(--success); }
+.sidebar a{
+color:white;
+text-decoration:none;
+display:block;
+padding:12px;
+}
 
-        /* FORM & LIST STYLES */
-        .section-box {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-        }
+.sidebar a:hover{
+background:#495057;
+}
 
-        h2 { margin-top: 0; color: var(--primary); font-size: 1.2em; border-bottom: 2px solid var(--light); padding-bottom: 10px; }
+.card{
+border:none;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
 
-        input { padding: 12px; margin: 5px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }
-        
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: 0.3s;
-            font-weight: 600;
-        }
+</style>
 
-        .btn-main { background: var(--success); color: white; }
-        .btn-venta { background: var(--accent); color: white; }
-        .btn-reponer { background: var(--warning); color: white; margin-left: 5px; }
-        .btn-anular { background: var(--danger); color: white; font-size: 0.8em; }
-
-        button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); opacity: 0.9; }
-
-        .search-input { width: 100%; border: 2px solid var(--accent); margin-bottom: 15px; }
-
-        ul { padding: 0; list-style: none; }
-        li { 
-            padding: 15px; 
-            border-bottom: 1px solid #eee; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-
-        .badge-danger { background: #ffdada; color: var(--danger); padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-        .fecha-tag { color: #95a5a6; font-size: 0.85em; margin-left: 10px; }
-        .total-dia { background: var(--primary); color: white; font-weight: bold; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; margin-top: 10px; }
-
-    </style>
 </head>
+
+
 <body>
 
-<div class="container">
-    <h1 style="text-align:center; color: var(--primary);">Marcos Stock v3.0</h1>
+<div class="container-fluid">
 
-    <div class="dashboard">
-        <div class="card-kpi kpi-ventas">
-            <h3>Ventas Hoy ($)</h3>
-            <p id="dashTotal">$0.00</p>
-        </div>
-        <div class="card-kpi">
-            <h3>Ventas Hoy (Cant.)</h3>
-            <p id="dashCant">0</p>
-        </div>
-        <div class="card-kpi kpi-alerta">
-            <h3>Alertas Stock</h3>
-            <p id="dashAlertas">0</p>
-        </div>
-    </div>
+<div class="row">
 
-    <div class="section-box">
-        <h2>Cargar Producto Nuevo</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-            <input id="nombre" placeholder="Nombre">
-            <input id="precio" type="number" placeholder="Precio $">
-            <input id="stock" type="number" placeholder="Stock Inicial">
-            <input id="stock_minimo" type="number" placeholder="Mínimo Alerta">
-            <button class="btn-main" onclick="agregarProducto()">+ Agregar</button>
-        </div>
-    </div>
+<!-- SIDEBAR -->
 
-    <div class="section-box">
-        <h2>Inventario Actual</h2>
-        <input type="text" id="buscador" class="search-input" placeholder="🔍 Buscar por nombre..." onkeyup="filtrarProductos()">
-        <ul id="listaProductos"></ul>
-    </div>
+<div class="col-2 sidebar">
 
-    <div class="section-box">
-        <h2>Historial de Ventas</h2>
-        <input type="date" id="filtroFecha" onchange="verVentas()">
-        <button onclick="verVentas()" style="background:#bdc3c7;">Actualizar</button>
-        <ul id="listaVentas"></ul>
-    </div>
+<h4 class="p-3">Stock</h4>
+
+<a href="#" onclick="mostrarDashboard()">Dashboard</a>
+<a href="#" onclick="mostrarProductos()">Productos</a>
+<a href="#" onclick="mostrarVentas()">Ventas</a>
+
 </div>
 
+
+
+<!-- CONTENIDO -->
+
+<div class="col-10 p-4">
+
+<div id="contenido">
+
+<h2>Dashboard</h2>
+
+<div class="row mt-4">
+
+<div class="col-md-4">
+
+<div class="card bg-warning text-white">
+<div class="card-body">
+
+<h5>Ventas hoy</h5>
+<h3 id="ventasHoy">$0</h3>
+
+</div>
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-primary text-white">
+<div class="card-body">
+
+<h5>Productos</h5>
+<h3 id="totalProductos">0</h3>
+
+</div>
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-danger text-white">
+<div class="card-body">
+
+<h5>Stock bajo</h5>
+<h3 id="stockBajo">0</h3>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
 <script>
-    const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
-    const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
-    const client = supabase.createClient(supabaseUrl, supabaseKey)
 
-    let productosLocales = [];
+const supabaseUrl = "TU_URL"
+const supabaseKey = "TU_KEY"
 
-    async function cargarProductos() {
-        const { data } = await client.from("productos").select("*").order("nombre", { ascending: true });
-        productosLocales = data || [];
-        renderizarProductos(productosLocales);
-        actualizarDashboard();
-    }
+const client = supabase.createClient(supabaseUrl,supabaseKey)
 
-    function renderizarProductos(lista) {
-        const ui = document.getElementById("listaProductos");
-        ui.innerHTML = "";
-        lista.forEach(p => {
-            const item = document.createElement("li");
-            let status = p.stock === 0 ? '<span class="badge-danger">SIN STOCK</span>' : (p.stock <= p.stock_minimo ? '<span class="badge-danger">BAJO STOCK</span>' : '');
-            item.innerHTML = `
-                <div><strong>${p.nombre}</strong> - $${p.precio} <br><small>Stock: ${p.stock}</small> ${status}</div>
-                <div>
-                    <button class="btn-venta" onclick="vender(${p.id})">Vender</button>
-                    <button class="btn-reponer" onclick="reponerStock(${p.id}, '${p.nombre}', ${p.stock}, ${p.precio})">Reponer</button>
-                </div>`;
-            ui.appendChild(item);
-        });
-    }
 
-    async function agregarProducto() {
-        const n = document.getElementById("nombre"), p = document.getElementById("precio"), s = document.getElementById("stock"), m = document.getElementById("stock_minimo");
-        if(!n.value || !p.value) return alert("Nombre y Precio son obligatorios");
-        await client.from("productos").insert({ nombre: n.value, precio: parseFloat(p.value), stock: parseInt(s.value)||0, stock_minimo: parseInt(m.value)||0 });
-        alert(`¡${n.value} guardado!`);
-        n.value = ""; p.value = ""; s.value = ""; m.value = ""; n.focus();
-        cargarProductos();
-    }
 
-    async function vender(id) {
-        const { data: p } = await client.from("productos").select("*").eq("id", id).single();
-        if (p.stock <= 0) return alert("Sin stock");
-        await client.from("productos").update({ stock: p.stock - 1 }).eq("id", id);
-        await client.from("ventas").insert({ nombre_producto: p.nombre, precio: p.precio });
-        cargarProductos();
-        setTimeout(verVentas, 500);
-    }
+async function mostrarDashboard(){
 
-    async function anularVenta(vId, nombre, boton) {
-        if (!confirm(`¿Anular venta de ${nombre}?`)) return;
-        const fila = boton.closest('li'); fila.style.opacity = '0.3';
-        const { error } = await client.from("ventas").delete().eq("id", vId);
-        if (error) return alert("Error al borrar. Revisa permisos DELETE.");
-        const { data: p } = await client.from("productos").select("*").eq("nombre", nombre).single();
-        if (p) await client.from("productos").update({ stock: p.stock + 1 }).eq("id", p.id);
-        cargarProductos();
-        verVentas();
-    }
+document.getElementById("contenido").innerHTML = `
+<h2>Dashboard</h2>
 
-    async function reponerStock(id, nombre, sAct, pAct) {
-        const cant = prompt(`Sumar stock a "${nombre}":`, "0");
-        if (cant === null || isNaN(cant) || cant==="") return;
-        const prec = prompt(`Nuevo precio:`, pAct);
-        if (prec === null || isNaN(prec) || prec==="") return;
-        await client.from("productos").update({ stock: sAct + parseInt(cant), precio: parseFloat(prec) }).eq("id", id);
-        cargarProductos();
-    }
+<div class="row mt-4">
 
-    async function verVentas() {
-        const filtro = document.getElementById("filtroFecha").value;
-        const ui = document.getElementById("listaVentas");
-        const { data } = await client.from("ventas").select("*").gte("created_at", `${filtro}T00:00:00.000Z`).lte("created_at", `${filtro}T23:59:59.999Z`).order("created_at", { ascending: false });
-        ui.innerHTML = "";
-        let total = 0;
-        if (!data || data.length === 0) return ui.innerHTML = "<li>No hay ventas.</li>";
-        data.forEach(v => {
-            const h = new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            total += parseFloat(v.precio) || 0;
-            const item = document.createElement("li");
-            item.innerHTML = `<div><strong>${v.nombre_producto}</strong> - $${v.precio} <span class="fecha-tag">🕒 ${h}</span></div>
-                              <button class="btn-anular" onclick="anularVenta(${v.id}, '${v.nombre_producto}', this)">Anular</button>`;
-            ui.appendChild(item);
-        });
-        const tItem = document.createElement("div"); tItem.className = "total-dia";
-        tItem.innerHTML = `<span>TOTAL:</span> <span>$${total.toFixed(2)}</span>`;
-        ui.appendChild(tItem);
-        actualizarDashboard(total, data.length);
-    }
+<div class="col-md-4">
+<div class="card bg-warning text-white">
+<div class="card-body">
+<h5>Ventas hoy</h5>
+<h3 id="ventasHoy">$0</h3>
+</div>
+</div>
+</div>
 
-    async function actualizarDashboard(totalHoy = null, cantHoy = null) {
-        // Alertas de Stock
-        const alertas = productosLocales.filter(p => p.stock <= p.stock_minimo).length;
-        document.getElementById("dashAlertas").innerText = alertas;
+<div class="col-md-4">
+<div class="card bg-primary text-white">
+<div class="card-body">
+<h5>Productos</h5>
+<h3 id="totalProductos">0</h3>
+</div>
+</div>
+</div>
 
-        // Si no pasamos datos, los buscamos (al cargar la página)
-        if (totalHoy === null) {
-            const hoy = document.getElementById("filtroFecha").value;
-            const { data } = await client.from("ventas").select("precio").gte("created_at", `${hoy}T00:00:00.000Z`).lte("created_at", `${hoy}T23:59:59.999Z`);
-            let sum = 0;
-            if (data) data.forEach(v => sum += v.precio);
-            document.getElementById("dashTotal").innerText = `$${sum.toFixed(2)}`;
-            document.getElementById("dashCant").innerText = data ? data.length : 0;
-        } else {
-            document.getElementById("dashTotal").innerText = `$${totalHoy.toFixed(2)}`;
-            document.getElementById("dashCant").innerText = cantHoy;
-        }
-    }
+<div class="col-md-4">
+<div class="card bg-danger text-white">
+<div class="card-body">
+<h5>Stock bajo</h5>
+<h3 id="stockBajo">0</h3>
+</div>
+</div>
+</div>
 
-    function filtrarProductos() {
-        const t = document.getElementById("buscador").value.toLowerCase();
-        renderizarProductos(productosLocales.filter(p => p.nombre.toLowerCase().includes(t)));
-    }
+</div>
+`
 
-    window.onload = () => {
-        document.getElementById("filtroFecha").value = new Date().toLocaleDateString('sv-SE');
-        cargarProductos();
-        verVentas();
-    }
+calcularDashboard()
+
+}
+
+
+
+async function calcularDashboard(){
+
+// total productos
+
+const { data:productos } = await client
+.from("productos")
+.select("*")
+
+document.getElementById("totalProductos").textContent = productos.length
+
+
+
+// stock bajo
+
+let bajo = productos.filter(p=>p.stock <= p.stock_minimo)
+
+document.getElementById("stockBajo").textContent = bajo.length
+
+
+
+// ventas hoy
+
+const { data:ventas } = await client
+.from("ventas")
+.select("*")
+
+let total = 0
+
+let hoy = new Date()
+hoy.setHours(0,0,0,0)
+
+ventas.forEach(v=>{
+
+if(new Date(v.fecha) >= hoy){
+
+total += v.precio
+
+}
+
+})
+
+document.getElementById("ventasHoy").textContent = "$"+total
+
+}
+
+
+
 </script>
+
 </body>
 </html>
+
