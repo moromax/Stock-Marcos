@@ -61,63 +61,7 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 
 <div class="col-10 p-4">
 
-<div id="contenido">
-
-<h2>Dashboard</h2>
-
-<div class="row mt-4">
-
-<div class="col-md-4">
-
-<div class="card bg-warning text-white">
-
-<div class="card-body">
-
-<h5>Ventas hoy</h5>
-
-<h3 id="ventasHoy">$0</h3>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-4">
-
-<div class="card bg-primary text-white">
-
-<div class="card-body">
-
-<h5>Total productos</h5>
-
-<h3 id="totalProductos">0</h3>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-4">
-
-<div class="card bg-danger text-white">
-
-<div class="card-body">
-
-<h5>Stock bajo</h5>
-
-<h3 id="stockBajo">0</h3>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
+<div id="contenido"></div>
 
 </div>
 
@@ -128,8 +72,8 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 
 <script>
 
-const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+const supabaseUrl = "TU_URL"
+const supabaseKey = "TU_KEY"
 
 const client = supabase.createClient(supabaseUrl,supabaseKey)
 
@@ -207,6 +151,8 @@ const { data:productos } = await client
 .from("productos")
 .select("*")
 
+if(!productos)return
+
 document.getElementById("totalProductos").textContent=productos.length
 
 let bajo=productos.filter(p=>p.stock<=p.stock_minimo)
@@ -217,6 +163,8 @@ document.getElementById("stockBajo").textContent=bajo.length
 const { data:ventas } = await client
 .from("ventas")
 .select("*")
+
+if(!ventas)return
 
 let total=0
 
@@ -293,6 +241,8 @@ const { data } = await client
 .select("*")
 .order("nombre",{ascending:true})
 
+if(!data)return
+
 const tabla=document.getElementById("tablaProductos")
 
 tabla.innerHTML=""
@@ -354,6 +304,11 @@ stock_minimo:stock_minimo
 
 cargarProductos()
 
+document.getElementById("nombre").value=""
+document.getElementById("precio").value=""
+document.getElementById("stock").value=""
+document.getElementById("stock_minimo").value=""
+
 }
 
 
@@ -369,7 +324,6 @@ const { data:producto } = await client
 if(producto.stock<=0){
 
 alert("Sin stock")
-
 return
 
 }
@@ -388,7 +342,8 @@ await client
 .insert({
 
 nombre_producto:producto.nombre,
-precio:producto.precio
+precio:producto.precio,
+fecha:new Date()
 
 })
 
@@ -403,6 +358,7 @@ alert("⚠ STOCK BAJO de "+producto.nombre)
 
 
 cargarProductos()
+calcularDashboard()
 
 }
 
@@ -447,6 +403,8 @@ const { data } = await client
 .select("*")
 .order("fecha",{ascending:false})
 
+if(!data)return
+
 const tabla=document.getElementById("tablaVentas")
 
 tabla.innerHTML=""
@@ -479,3 +437,4 @@ mostrarDashboard()
 
 </body>
 </html>
+
