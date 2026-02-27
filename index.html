@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
 
+<head>
 <meta charset="UTF-8">
 <title>Sistema de Ventas</title>
 
@@ -12,12 +12,42 @@
 <style>
 
 body{
-background:#f5f5f5;
-padding:30px;
+background:#f4f6f9;
 }
 
-.card{
-margin-bottom:20px;
+.sidebar{
+height:100vh;
+background:#343a40;
+color:white;
+padding:20px;
+}
+
+.sidebar h4{
+color:white;
+}
+
+.sidebar a{
+color:white;
+display:block;
+margin:15px 0;
+text-decoration:none;
+}
+
+.card-dashboard{
+padding:20px;
+color:white;
+}
+
+.card-blue{
+background:#0d6efd;
+}
+
+.card-green{
+background:#198754;
+}
+
+.card-orange{
+background:#fd7e14;
 }
 
 .stock-bajo{
@@ -29,18 +59,64 @@ font-weight:bold;
 
 </head>
 
+
 <body>
 
-<div class="container">
+<div class="container-fluid">
+<div class="row">
 
-<h1 class="mb-4">Sistema de Ventas</h1>
+<!-- SIDEBAR -->
+
+<div class="col-2 sidebar">
+
+<h4>Sistema</h4>
+
+<a href="#">Dashboard</a>
+<a href="#">Inventario</a>
+<a href="#">Ventas</a>
+
+</div>
+
+
+<!-- CONTENIDO -->
+
+<div class="col-10 p-4">
+
+<h2>Dashboard</h2>
+
+<div class="row mb-4">
+
+<div class="col-md-4">
+<div class="card card-dashboard card-blue">
+<h4 id="totalProductos">0</h4>
+Productos
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card card-dashboard card-green">
+<h4 id="totalVentas">0</h4>
+Ventas realizadas
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card card-dashboard card-orange">
+<h4 id="ventasHoy">$0</h4>
+Ventas hoy
+</div>
+</div>
+
+</div>
+
 
 <div class="row">
 
-<div class="col-md-4">
+<!-- AGREGAR PRODUCTO -->
 
-<div class="card">
-<div class="card-body">
+<div class="col-md-3">
+
+<div class="card p-3">
 
 <h5>Agregar producto</h5>
 
@@ -52,57 +128,39 @@ font-weight:bold;
 
 <input id="stock_minimo" class="form-control mb-2" type="number" placeholder="Stock mínimo">
 
-<button onclick="agregarProducto()" class="btn btn-primary w-100">
-Agregar
-</button>
+<button class="btn btn-primary w-100" onclick="agregarProducto()">Agregar</button>
 
-</div>
-</div>
-
-
-<div class="card">
-<div class="card-body">
-
-<h5>Dashboard</h5>
-
-<p>Total productos: <b id="totalProductos">0</b></p>
-
-<p>Ventas realizadas: <b id="totalVentas">0</b></p>
-
-</div>
 </div>
 
 </div>
 
 
+<!-- PRODUCTOS -->
 
-<div class="col-md-4">
+<div class="col-md-5">
 
-<div class="card">
-<div class="card-body">
+<div class="card p-3">
 
 <h5>Productos</h5>
 
 <ul id="listaProductos" class="list-group"></ul>
 
 </div>
-</div>
 
 </div>
 
 
+<!-- HISTORIAL -->
 
 <div class="col-md-4">
 
-<div class="card">
-<div class="card-body">
+<div class="card p-3">
 
 <h5>Historial de ventas</h5>
 
 <ul id="listaVentas" class="list-group"></ul>
 
 </div>
-</div>
 
 </div>
 
@@ -110,24 +168,26 @@ Agregar
 
 </div>
 
+</div>
+
+</div>
 
 
 <script>
 
-const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
+const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
-const client = supabase.createClient(supabaseUrl,supabaseKey)
+const client=supabase.createClient(supabaseUrl,supabaseKey)
 
 
 
 async function agregarProducto(){
 
-const nombre = document.getElementById("nombre").value
-const precio = document.getElementById("precio").value
-const stock = document.getElementById("stock").value
-const stock_minimo = document.getElementById("stock_minimo").value
-
+const nombre=document.getElementById("nombre").value
+const precio=document.getElementById("precio").value
+const stock=document.getElementById("stock").value
+const stock_minimo=document.getElementById("stock_minimo").value
 
 await client
 .from("productos")
@@ -138,15 +198,13 @@ stock:stock,
 stock_minimo:stock_minimo
 })
 
-
 document.getElementById("nombre").value=""
 document.getElementById("precio").value=""
 document.getElementById("stock").value=""
 document.getElementById("stock_minimo").value=""
 
-
 cargarProductos()
-actualizarDashboard()
+calcularDashboard()
 
 }
 
@@ -154,35 +212,32 @@ actualizarDashboard()
 
 async function cargarProductos(){
 
-const { data } = await client
+const {data}=await client
 .from("productos")
 .select("*")
 .order("nombre",{ascending:true})
 
-
-const lista = document.getElementById("listaProductos")
-
+const lista=document.getElementById("listaProductos")
 lista.innerHTML=""
-
 
 data.forEach(p=>{
 
-const item = document.createElement("li")
+let alerta=""
 
-item.className="list-group-item d-flex justify-content-between align-items-center"
+if(p.stock<=p.stock_minimo){
 
-let alerta = ""
-
-if(p.stock <= p.stock_minimo){
-
-alerta = "<span class='stock-bajo'>⚠ Stock bajo</span>"
+alerta="<div class='stock-bajo'>⚠ Stock bajo</div>"
 
 }
 
-item.innerHTML = `
+const item=document.createElement("li")
+
+item.className="list-group-item d-flex justify-content-between align-items-center"
+
+item.innerHTML=`
 <div>
 <b>${p.nombre}</b><br>
-$${p.precio} - Stock: ${p.stock}<br>
+$${p.precio} - Stock: ${p.stock}
 ${alerta}
 </div>
 
@@ -202,7 +257,7 @@ lista.appendChild(item)
 
 async function vender(id,nombre,precio,stock,stock_minimo){
 
-if(stock <= 0){
+if(stock<=0){
 
 alert("No hay stock")
 
@@ -210,34 +265,30 @@ return
 
 }
 
-const nuevoStock = stock - 1
-
+const nuevoStock=stock-1
 
 await client
 .from("productos")
 .update({stock:nuevoStock})
 .eq("id",id)
 
-
-
 await client
 .from("ventas")
 .insert({
 nombre_producto:nombre,
-precio:precio
+precio:precio,
+fecha:new Date()
 })
 
+if(nuevoStock<=stock_minimo){
 
-if(nuevoStock <= stock_minimo){
-
-alert("⚠ STOCK BAJO de " + nombre)
+alert("⚠ STOCK BAJO de "+nombre)
 
 }
 
-
 cargarProductos()
 verVentas()
-actualizarDashboard()
+calcularDashboard()
 
 }
 
@@ -245,26 +296,24 @@ actualizarDashboard()
 
 async function verVentas(){
 
-const { data } = await client
+const {data}=await client
 .from("ventas")
 .select("*")
 .order("fecha",{ascending:false})
 
-
-const lista = document.getElementById("listaVentas")
+const lista=document.getElementById("listaVentas")
 
 lista.innerHTML=""
 
-
 data.forEach(v=>{
 
-const item = document.createElement("li")
+const item=document.createElement("li")
 
 item.className="list-group-item"
 
-const fecha = new Date(v.fecha).toLocaleString()
+const fecha=new Date(v.fecha).toLocaleString()
 
-item.textContent = `${v.nombre_producto} - $${v.precio} - ${fecha}`
+item.textContent=`${v.nombre_producto} - $${v.precio} - ${fecha}`
 
 lista.appendChild(item)
 
@@ -274,20 +323,39 @@ lista.appendChild(item)
 
 
 
-async function actualizarDashboard(){
+async function calcularDashboard(){
 
-const { data: productos } = await client
+const {data:productos}=await client
 .from("productos")
 .select("*")
 
-const { data: ventas } = await client
+document.getElementById("totalProductos").textContent=productos.length
+
+
+const {data:ventas}=await client
 .from("ventas")
 .select("*")
 
+document.getElementById("totalVentas").textContent=ventas.length
 
-document.getElementById("totalProductos").textContent = productos.length
 
-document.getElementById("totalVentas").textContent = ventas.length
+const hoy=new Date()
+
+hoy.setHours(0,0,0,0)
+
+let totalHoy=0
+
+ventas.forEach(v=>{
+
+if(new Date(v.fecha)>=hoy){
+
+totalHoy+=v.precio
+
+}
+
+})
+
+document.getElementById("ventasHoy").textContent="$"+totalHoy
 
 }
 
@@ -295,7 +363,7 @@ document.getElementById("totalVentas").textContent = ventas.length
 
 cargarProductos()
 verVentas()
-actualizarDashboard()
+calcularDashboard()
 
 </script>
 
