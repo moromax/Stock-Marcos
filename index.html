@@ -13,7 +13,7 @@
 <style>
 
 body{
-background:#f5f5f5;
+background:#f4f6f9;
 }
 
 .sidebar{
@@ -42,14 +42,11 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 
 </head>
 
-
 <body>
 
 <div class="container-fluid">
 
 <div class="row">
-
-<!-- SIDEBAR -->
 
 <div class="col-2 sidebar">
 
@@ -62,9 +59,6 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 </div>
 
 
-
-<!-- CONTENIDO -->
-
 <div class="col-10 p-4">
 
 <div id="contenido">
@@ -76,12 +70,15 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 <div class="col-md-4">
 
 <div class="card bg-warning text-white">
+
 <div class="card-body">
 
 <h5>Ventas hoy</h5>
+
 <h3 id="ventasHoy">$0</h3>
 
 </div>
+
 </div>
 
 </div>
@@ -89,12 +86,15 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 <div class="col-md-4">
 
 <div class="card bg-primary text-white">
+
 <div class="card-body">
 
-<h5>Productos</h5>
+<h5>Total productos</h5>
+
 <h3 id="totalProductos">0</h3>
 
 </div>
+
 </div>
 
 </div>
@@ -102,12 +102,15 @@ box-shadow:0 2px 5px rgba(0,0,0,0.1);
 <div class="col-md-4">
 
 <div class="card bg-danger text-white">
+
 <div class="card-body">
 
 <h5>Stock bajo</h5>
+
 <h3 id="stockBajo">0</h3>
 
 </div>
+
 </div>
 
 </div>
@@ -134,39 +137,62 @@ const client = supabase.createClient(supabaseUrl,supabaseKey)
 
 async function mostrarDashboard(){
 
-document.getElementById("contenido").innerHTML = `
+document.getElementById("contenido").innerHTML=`
+
 <h2>Dashboard</h2>
 
 <div class="row mt-4">
 
 <div class="col-md-4">
+
 <div class="card bg-warning text-white">
+
 <div class="card-body">
+
 <h5>Ventas hoy</h5>
+
 <h3 id="ventasHoy">$0</h3>
+
 </div>
+
 </div>
+
 </div>
 
 <div class="col-md-4">
+
 <div class="card bg-primary text-white">
+
 <div class="card-body">
-<h5>Productos</h5>
+
+<h5>Total productos</h5>
+
 <h3 id="totalProductos">0</h3>
+
 </div>
+
 </div>
+
 </div>
 
 <div class="col-md-4">
+
 <div class="card bg-danger text-white">
+
 <div class="card-body">
+
 <h5>Stock bajo</h5>
+
 <h3 id="stockBajo">0</h3>
-</div>
-</div>
+
 </div>
 
 </div>
+
+</div>
+
+</div>
+
 `
 
 calcularDashboard()
@@ -177,53 +203,279 @@ calcularDashboard()
 
 async function calcularDashboard(){
 
-// total productos
-
 const { data:productos } = await client
 .from("productos")
 .select("*")
 
-document.getElementById("totalProductos").textContent = productos.length
+document.getElementById("totalProductos").textContent=productos.length
 
+let bajo=productos.filter(p=>p.stock<=p.stock_minimo)
 
+document.getElementById("stockBajo").textContent=bajo.length
 
-// stock bajo
-
-let bajo = productos.filter(p=>p.stock <= p.stock_minimo)
-
-document.getElementById("stockBajo").textContent = bajo.length
-
-
-
-// ventas hoy
 
 const { data:ventas } = await client
 .from("ventas")
 .select("*")
 
-let total = 0
+let total=0
 
-let hoy = new Date()
+let hoy=new Date()
 hoy.setHours(0,0,0,0)
 
 ventas.forEach(v=>{
 
-if(new Date(v.fecha) >= hoy){
+if(new Date(v.fecha)>=hoy){
 
-total += v.precio
+total+=v.precio
 
 }
 
 })
 
-document.getElementById("ventasHoy").textContent = "$"+total
+document.getElementById("ventasHoy").textContent="$"+total
 
 }
 
 
 
+async function mostrarProductos(){
+
+document.getElementById("contenido").innerHTML=`
+
+<h2>Productos</h2>
+
+<div class="mb-3">
+
+<input id="nombre" class="form-control mb-2" placeholder="Nombre producto">
+
+<input id="precio" class="form-control mb-2" type="number" placeholder="Precio">
+
+<input id="stock" class="form-control mb-2" type="number" placeholder="Stock">
+
+<input id="stock_minimo" class="form-control mb-2" type="number" placeholder="Stock mínimo">
+
+<button class="btn btn-success" onclick="agregarProducto()">Agregar producto</button>
+
+</div>
+
+<table class="table table-striped">
+
+<thead>
+
+<tr>
+
+<th>Producto</th>
+<th>Precio</th>
+<th>Stock</th>
+<th>Acción</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tablaProductos"></tbody>
+
+</table>
+
+`
+
+cargarProductos()
+
+}
+
+
+
+async function cargarProductos(){
+
+const { data } = await client
+.from("productos")
+.select("*")
+.order("nombre",{ascending:true})
+
+const tabla=document.getElementById("tablaProductos")
+
+tabla.innerHTML=""
+
+data.forEach(p=>{
+
+let alerta=""
+
+if(p.stock<=p.stock_minimo){
+
+alerta=" ⚠"
+
+}
+
+tabla.innerHTML+=`
+
+<tr>
+
+<td>${p.nombre}</td>
+
+<td>$${p.precio}</td>
+
+<td>${p.stock}${alerta}</td>
+
+<td>
+
+<button class="btn btn-sm btn-primary"
+onclick="vender(${p.id})">Vender</button>
+
+</td>
+
+</tr>
+
+`
+
+})
+
+}
+
+
+
+async function agregarProducto(){
+
+const nombre=document.getElementById("nombre").value
+const precio=document.getElementById("precio").value
+const stock=document.getElementById("stock").value
+const stock_minimo=document.getElementById("stock_minimo").value
+
+await client
+.from("productos")
+.insert({
+
+nombre:nombre,
+precio:precio,
+stock:stock,
+stock_minimo:stock_minimo
+
+})
+
+cargarProductos()
+
+}
+
+
+
+async function vender(id){
+
+const { data:producto } = await client
+.from("productos")
+.select("*")
+.eq("id",id)
+.single()
+
+if(producto.stock<=0){
+
+alert("Sin stock")
+
+return
+
+}
+
+let nuevoStock=producto.stock-1
+
+await client
+.from("productos")
+.update({stock:nuevoStock})
+.eq("id",id)
+
+
+
+await client
+.from("ventas")
+.insert({
+
+nombre_producto:producto.nombre,
+precio:producto.precio
+
+})
+
+
+
+if(nuevoStock<=producto.stock_minimo){
+
+alert("⚠ STOCK BAJO de "+producto.nombre)
+
+}
+
+
+
+cargarProductos()
+
+}
+
+
+
+async function mostrarVentas(){
+
+document.getElementById("contenido").innerHTML=`
+
+<h2>Historial de ventas</h2>
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>Producto</th>
+<th>Precio</th>
+<th>Fecha</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tablaVentas"></tbody>
+
+</table>
+
+`
+
+verVentas()
+
+}
+
+
+
+async function verVentas(){
+
+const { data } = await client
+.from("ventas")
+.select("*")
+.order("fecha",{ascending:false})
+
+const tabla=document.getElementById("tablaVentas")
+
+tabla.innerHTML=""
+
+data.forEach(v=>{
+
+const fecha=new Date(v.fecha).toLocaleString()
+
+tabla.innerHTML+=`
+
+<tr>
+
+<td>${v.nombre_producto}</td>
+<td>$${v.precio}</td>
+<td>${fecha}</td>
+
+</tr>
+
+`
+
+})
+
+}
+
+
+
+mostrarDashboard()
+
 </script>
 
 </body>
 </html>
-
