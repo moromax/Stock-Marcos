@@ -22,15 +22,12 @@ color:white;
 padding:20px;
 }
 
-.sidebar h4{
-color:white;
-}
-
 .sidebar a{
 color:white;
 display:block;
 margin:15px 0;
 text-decoration:none;
+cursor:pointer;
 }
 
 .card-dashboard{
@@ -65,20 +62,16 @@ font-weight:bold;
 <div class="container-fluid">
 <div class="row">
 
-<!-- SIDEBAR -->
-
 <div class="col-2 sidebar">
 
 <h4>Sistema</h4>
 
-<a href="#">Dashboard</a>
-<a href="#">Inventario</a>
-<a href="#">Ventas</a>
+<a onclick="mostrarDashboard()">Dashboard</a>
+<a onclick="mostrarInventario()">Inventario</a>
+<a onclick="mostrarVentas()">Ventas</a>
 
 </div>
 
-
-<!-- CONTENIDO -->
 
 <div class="col-10 p-4">
 
@@ -112,8 +105,6 @@ Ventas hoy
 
 <div class="row">
 
-<!-- AGREGAR PRODUCTO -->
-
 <div class="col-md-3">
 
 <div class="card p-3">
@@ -121,11 +112,8 @@ Ventas hoy
 <h5>Agregar producto</h5>
 
 <input id="nombre" class="form-control mb-2" placeholder="Nombre">
-
 <input id="precio" class="form-control mb-2" type="number" placeholder="Precio">
-
 <input id="stock" class="form-control mb-2" type="number" placeholder="Stock">
-
 <input id="stock_minimo" class="form-control mb-2" type="number" placeholder="Stock mínimo">
 
 <button class="btn btn-primary w-100" onclick="agregarProducto()">Agregar</button>
@@ -134,8 +122,6 @@ Ventas hoy
 
 </div>
 
-
-<!-- PRODUCTOS -->
 
 <div class="col-md-5">
 
@@ -149,8 +135,6 @@ Ventas hoy
 
 </div>
 
-
-<!-- HISTORIAL -->
 
 <div class="col-md-4">
 
@@ -189,9 +173,7 @@ const precio=document.getElementById("precio").value
 const stock=document.getElementById("stock").value
 const stock_minimo=document.getElementById("stock_minimo").value
 
-await client
-.from("productos")
-.insert({
+await client.from("productos").insert({
 nombre:nombre,
 precio:precio,
 stock:stock,
@@ -218,6 +200,7 @@ const {data}=await client
 .order("nombre",{ascending:true})
 
 const lista=document.getElementById("listaProductos")
+
 lista.innerHTML=""
 
 data.forEach(p=>{
@@ -260,7 +243,6 @@ async function vender(id,nombre,precio,stock,stock_minimo){
 if(stock<=0){
 
 alert("No hay stock")
-
 return
 
 }
@@ -340,7 +322,6 @@ document.getElementById("totalVentas").textContent=ventas.length
 
 
 const hoy=new Date()
-
 hoy.setHours(0,0,0,0)
 
 let totalHoy=0
@@ -361,6 +342,26 @@ document.getElementById("ventasHoy").textContent="$"+totalHoy
 
 
 
+function mostrarDashboard(){
+
+alert("Estás en el dashboard")
+
+}
+
+function mostrarInventario(){
+
+document.getElementById("listaProductos").scrollIntoView()
+
+}
+
+function mostrarVentas(){
+
+document.getElementById("listaVentas").scrollIntoView()
+
+}
+
+
+
 cargarProductos()
 verVentas()
 calcularDashboard()
@@ -369,4 +370,3 @@ calcularDashboard()
 
 </body>
 </html>
-
