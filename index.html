@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
 <meta charset="UTF-8">
 <title>Sistema de Ventas</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
 <style>
 
 body{
-background:#000;
-color:#fff;
-font-family:Arial;
-margin:0;
+background:#f5f6fa;
 }
 
 .sidebar{
 width:200px;
 height:100vh;
-background:#111;
+background:#2f3640;
 position:fixed;
 padding:20px;
 }
@@ -26,11 +27,6 @@ padding:20px;
 .sidebar button{
 width:100%;
 margin-bottom:10px;
-padding:10px;
-background:#444;
-border:none;
-color:white;
-cursor:pointer;
 }
 
 .main{
@@ -39,60 +35,86 @@ padding:20px;
 }
 
 .card{
-background:#111;
-padding:20px;
 margin-bottom:20px;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th,td{
-padding:12px;
-border-bottom:1px solid #333;
-}
-
-.btn-vender{
-background:#37c978;
-border:none;
-padding:8px 15px;
-cursor:pointer;
 }
 
 </style>
 
 </head>
+
 <body>
+
 
 <div class="sidebar">
 
-<button onclick="mostrarInventario()">Inventario</button>
-<button onclick="mostrarVentas()">Ventas</button>
+<button class="btn btn-light" onclick="mostrarInventario()">Inventario</button>
+
+<button class="btn btn-light" onclick="mostrarVentas()">Ventas</button>
 
 </div>
 
 
 <div class="main">
 
-<div class="card">
-<h2>Dashboard</h2>
-<h3 id="totalVentas">$0</h3>
+<div class="row">
+
+<div class="col-md-4">
+
+<div class="card bg-success text-white">
+
+<div class="card-body">
+
+<h5>Ventas totales</h5>
+
+<h2 id="totalVentas">$0</h2>
+
 </div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-primary text-white">
+
+<div class="card-body">
+
+<h5>Productos</h5>
+
+<h2 id="totalProductos">0</h2>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
 
 <div id="inventario">
 
-<h2>Inventario</h2>
+<div class="card">
 
-<table>
+<div class="card-body">
+
+<h4>Inventario</h4>
+
+<table class="table">
+
 <thead>
+
 <tr>
+
 <th>Producto</th>
 <th>Precio</th>
 <th>Stock</th>
 <th>Acción</th>
+
 </tr>
+
 </thead>
 
 <tbody id="tablaProductos"></tbody>
@@ -101,19 +123,32 @@ cursor:pointer;
 
 </div>
 
+</div>
+
+</div>
+
+
 
 <div id="ventas" style="display:none">
 
-<h2>Historial de ventas</h2>
+<div class="card">
 
-<table>
+<div class="card-body">
+
+<h4>Historial de ventas</h4>
+
+<table class="table">
 
 <thead>
+
 <tr>
+
 <th>Producto</th>
 <th>Precio</th>
 <th>Fecha</th>
+
 </tr>
+
 </thead>
 
 <tbody id="tablaVentas"></tbody>
@@ -124,6 +159,12 @@ cursor:pointer;
 
 </div>
 
+</div>
+
+
+</div>
+
+
 
 <script>
 
@@ -131,6 +172,7 @@ const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
 const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
 const client = supabase.createClient(supabaseUrl,supabaseKey)
+
 
 
 async function cargarProductos(){
@@ -145,7 +187,10 @@ console.log(error)
 return
 }
 
+document.getElementById("totalProductos").innerText=data.length
+
 const tabla=document.getElementById("tablaProductos")
+
 tabla.innerHTML=""
 
 data.forEach(p=>{
@@ -159,10 +204,15 @@ tabla.innerHTML+=`
 <td>${p.stock}</td>
 
 <td>
-<button class="btn-vender"
+
+<button class="btn btn-success"
+
 onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock},${p.stock_minimo})">
+
 Vender
+
 </button>
+
 </td>
 
 </tr>
@@ -174,23 +224,27 @@ Vender
 }
 
 
+
 async function vender(id,nombre,precio,stock,stock_minimo){
 
 if(stock<=0){
+
 alert("No hay stock")
+
 return
+
 }
 
 const nuevoStock=stock-1
 
-// actualizar stock
+
 await client
 .from("productos")
 .update({stock:nuevoStock})
 .eq("id",id)
 
 
-// registrar venta
+
 const {error}=await client
 .from("ventas")
 .insert([
@@ -202,23 +256,30 @@ fecha:new Date().toISOString()
 ])
 
 if(error){
+
 console.log(error)
+
 alert("Error registrando venta")
+
 return
+
 }
 
 
 if(nuevoStock<=stock_minimo){
-alert("⚠ STOCK BAJO de "+nombre)
+
+alert("⚠ Stock bajo de "+nombre)
+
 }
 
-
-// recargar todo
 await cargarProductos()
+
 await verVentas()
+
 await calcularDashboard()
 
 }
+
 
 
 async function verVentas(){
@@ -234,6 +295,7 @@ return
 }
 
 const tabla=document.getElementById("tablaVentas")
+
 tabla.innerHTML=""
 
 data.forEach(v=>{
@@ -255,6 +317,7 @@ tabla.innerHTML+=`
 }
 
 
+
 async function calcularDashboard(){
 
 const {data,error}=await client
@@ -269,7 +332,9 @@ return
 let total=0
 
 data.forEach(v=>{
+
 total+=v.precio
+
 })
 
 document.getElementById("totalVentas").innerText="$"+total
@@ -277,28 +342,35 @@ document.getElementById("totalVentas").innerText="$"+total
 }
 
 
+
 function mostrarInventario(){
 
 document.getElementById("inventario").style.display="block"
+
 document.getElementById("ventas").style.display="none"
 
 }
 
 
+
 function mostrarVentas(){
 
 document.getElementById("inventario").style.display="none"
+
 document.getElementById("ventas").style.display="block"
 
 }
 
 
-// iniciar app
+
 cargarProductos()
+
 verVentas()
+
 calcularDashboard()
 
 </script>
+
 
 </body>
 </html>
