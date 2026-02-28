@@ -3,21 +3,23 @@
 <head>
 
 <meta charset="UTF-8">
-<title>Sistema de Ventas</title>
+<title>Dashboard Ventas</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 
 body{
-background:#f4f6f9;
+background:#f5f6fa;
 }
 
 .sidebar{
+width:220px;
 height:100vh;
-background:#1e293b;
+position:fixed;
+background:#343a40;
 color:white;
 padding:20px;
 }
@@ -27,160 +29,94 @@ width:100%;
 margin-bottom:10px;
 }
 
-.card-dashboard{
+.main{
+margin-left:240px;
 padding:20px;
-border-radius:10px;
-color:white;
 }
 
-.card-productos{background:#3b82f6;}
-.card-ventas{background:#10b981;}
-.card-stock{background:#f59e0b;}
-
-.total-card{
-font-size:40px;
-font-weight:bold;
+.card-dashboard{
+font-size:22px;
 text-align:center;
-padding:30px;
 }
 
-.seccion{
-display:none;
+.precio-grande{
+font-size:45px;
+font-weight:bold;
 }
 
 </style>
 
 </head>
-
 <body>
 
-<div class="container-fluid">
+<div class="sidebar">
 
-<div class="row">
+<h4>Menu</h4>
 
-<div class="col-2 sidebar">
-
-<h4>Sistema</h4>
-
-<button class="btn btn-light" onclick="mostrarCaja()">Caja</button>
-<button class="btn btn-light" onclick="mostrarInventario()">Inventario</button>
-<button class="btn btn-light" onclick="mostrarStock()">Stock</button>
 <button class="btn btn-light" onclick="mostrarVentas()">Ventas</button>
 
-</div>
+<button class="btn btn-light" onclick="mostrarInventario()">Inventario</button>
 
-<div class="col-10 p-4">
-
-
-<!-- CAJA -->
-
-<div id="caja" class="seccion">
-
-<h2>Caja</h2>
-
-<input id="productoVenta" list="listaProductos" class="form-control mb-2" placeholder="Ingrese producto">
-
-<datalist id="listaProductos"></datalist>
-
-<input id="cantidadVenta" type="number" class="form-control mb-3" placeholder="Cantidad">
-
-<div class="card card-body total-card">
-
-TOTAL $<span id="totalVenta">0</span>
+<button class="btn btn-light" onclick="mostrarHistorial()">Historial</button>
 
 </div>
 
-<button class="btn btn-success mt-3" onclick="realizarVenta()">Vender</button>
+<div class="main">
+
+<h2>Vender producto</h2>
+
+<div class="card p-3 mb-4">
+
+<input id="buscarProducto" class="form-control mb-2" placeholder="Ingrese producto">
+
+<input id="cantidadVenta" type="number" class="form-control mb-2" placeholder="Cantidad">
+
+<div class="precio-grande text-success" id="precioTotal">$0</div>
+
+<button class="btn btn-primary mt-2" onclick="venderProducto()">Vender</button>
 
 </div>
 
 
+<div class="row mb-4">
 
-<!-- INVENTARIO -->
-
-<div id="inventario" class="seccion">
-
-<h2>Inventario</h2>
-
-<ul id="listaInventario" class="list-group"></ul>
-
-</div>
-
-
-
-<!-- STOCK -->
-
-<div id="stock" class="seccion">
-
-<h2>Reposición de Stock</h2>
-
-<ul id="listaStock" class="list-group"></ul>
-
-</div>
-
-
-
-<!-- VENTAS -->
-
-<div id="ventas" class="seccion">
-
-<h2>Ventas por fecha</h2>
-
-<input type="date" id="fechaInicio">
-<input type="date" id="fechaFin">
-
-<button class="btn btn-primary" onclick="ventasPorFecha()">Buscar</button>
-
-<ul id="listaVentas" class="list-group mt-3"></ul>
-
-</div>
-
-
-
-</div>
+<div class="col-md-4">
+<div class="card card-dashboard p-3 bg-primary text-white">
+Ventas del día
+<div id="ventasHoy">0</div>
 </div>
 </div>
 
+<div class="col-md-4">
+<div class="card card-dashboard p-3 bg-success text-white">
+Total vendido
+<div id="totalVendido">$0</div>
+</div>
+</div>
+
+</div>
+
+<h3>Productos</h3>
+
+<ul id="listaProductos" class="list-group mb-4"></ul>
+
+<h3>Historial de ventas</h3>
+
+<ul id="historialVentas" class="list-group"></ul>
+
+</div>
 
 
 <script>
 
-const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+const url="https://lvtjeeokpejdexlsshqa.supabase.co"
 
-const client=supabase.createClient(supabaseUrl,supabaseKey)
+const key="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+
+const client=supabase.createClient(url,key)
 
 let productos=[]
-
-
-
-function mostrarCaja(){
-ocultarTodo()
-document.getElementById("caja").style.display="block"
-}
-
-function mostrarInventario(){
-ocultarTodo()
-document.getElementById("inventario").style.display="block"
-}
-
-function mostrarStock(){
-ocultarTodo()
-document.getElementById("stock").style.display="block"
-}
-
-function mostrarVentas(){
-ocultarTodo()
-document.getElementById("ventas").style.display="block"
-verVentas()
-}
-
-function ocultarTodo(){
-document.querySelectorAll(".seccion").forEach(s=>{
-s.style.display="none"
-})
-}
-
+let productoSeleccionado=null
 
 
 async function cargarProductos(){
@@ -188,168 +124,123 @@ async function cargarProductos(){
 const {data}=await client
 .from("productos")
 .select("*")
-.order("nombre",{ascending:true})
+.order("nombre")
 
 productos=data
 
 const lista=document.getElementById("listaProductos")
-
 lista.innerHTML=""
 
 data.forEach(p=>{
 
-const option=document.createElement("option")
-option.value=p.nombre
-lista.appendChild(option)
+lista.innerHTML+=`
+<li class="list-group-item d-flex justify-content-between">
+
+${p.nombre} - $${p.precio} - Stock ${p.stock}
+
+<button class="btn btn-success btn-sm"
+onclick="seleccionarProducto(${p.id})">
+Vender
+</button>
+
+</li>
+`
 
 })
 
-cargarInventario()
-cargarStock()
+}
+
+
+function seleccionarProducto(id){
+
+productoSeleccionado=productos.find(p=>p.id==id)
+
+document.getElementById("buscarProducto").value=productoSeleccionado.nombre
+
+calcularPrecio()
 
 }
 
 
-
-document.getElementById("productoVenta").addEventListener("input",calcularTotal)
-document.getElementById("cantidadVenta").addEventListener("input",calcularTotal)
+document.getElementById("cantidadVenta").addEventListener("input",calcularPrecio)
 
 
+function calcularPrecio(){
 
-function calcularTotal(){
+if(!productoSeleccionado)return
 
-const nombre=document.getElementById("productoVenta").value
-const cantidad=parseInt(document.getElementById("cantidadVenta").value)
+const cantidad=document.getElementById("cantidadVenta").value
 
-const producto=productos.find(p=>p.nombre==nombre)
+if(!cantidad)return
 
-if(!producto || !cantidad){
+const total=cantidad*productoSeleccionado.precio
 
-document.getElementById("totalVenta").textContent=0
-return
-
-}
-
-const total=producto.precio*cantidad
-
-document.getElementById("totalVenta").textContent=total
+document.getElementById("precioTotal").innerText="$"+total
 
 }
 
 
+async function venderProducto(){
 
-async function realizarVenta(){
-
-const nombre=document.getElementById("productoVenta").value
-const cantidad=parseInt(document.getElementById("cantidadVenta").value)
-
-const producto=productos.find(p=>p.nombre==nombre)
-
-if(!producto){
-alert("Producto inexistente")
+if(!productoSeleccionado){
+alert("Seleccione un producto")
 return
 }
 
-if(producto.stock<cantidad){
+const cantidad=parseInt(document.getElementById("cantidadVenta").value)
+
+if(!cantidad){
+alert("Ingrese cantidad")
+return
+}
+
+if(cantidad>productoSeleccionado.stock){
 alert("Stock insuficiente")
 return
 }
 
-const nuevoStock=producto.stock-cantidad
+const nuevoStock=productoSeleccionado.stock-cantidad
+
+const precioUnitario=productoSeleccionado.precio
+const precioTotal=cantidad*precioUnitario
+
+/* actualizar stock */
 
 await client
 .from("productos")
 .update({stock:nuevoStock})
-.eq("id",producto.id)
+.eq("id",productoSeleccionado.id)
 
+/* registrar venta */
 
-const total=producto.precio*cantidad
-
-await client
+const {error}=await client
 .from("ventas")
 .insert({
-nombre_producto:nombre,
-cantidad:cantidad,
-precio_unitario:producto.precio,
-precio_total:total
+producto_id:productoSeleccionado.id,
+nombre_producto:productoSeleccionado.nombre,
+precio_unitario:precioUnitario,
+precio_total:precioTotal
 })
 
-alert("Venta realizada")
+if(error){
+alert("Error registrando venta")
+return
+}
 
-document.getElementById("productoVenta").value=""
+/* alerta stock bajo */
+
+if(nuevoStock<=productoSeleccionado.stock_minimo){
+alert("⚠ STOCK BAJO de "+productoSeleccionado.nombre)
+}
+
 document.getElementById("cantidadVenta").value=""
-document.getElementById("totalVenta").textContent=0
+document.getElementById("precioTotal").innerText="$0"
 
 cargarProductos()
+verVentas()
+calcularDashboard()
 
 }
-
-
-
-function cargarInventario(){
-
-const lista=document.getElementById("listaInventario")
-
-lista.innerHTML=""
-
-productos.forEach(p=>{
-
-const item=document.createElement("li")
-
-item.className="list-group-item"
-
-item.textContent=`${p.nombre} - $${p.precio} - Stock ${p.stock}`
-
-lista.appendChild(item)
-
-})
-
-}
-
-
-
-function cargarStock(){
-
-const lista=document.getElementById("listaStock")
-
-lista.innerHTML=""
-
-productos.forEach(p=>{
-
-const item=document.createElement("li")
-
-item.className="list-group-item"
-
-item.innerHTML=`
-${p.nombre} - Stock ${p.stock}
-<button onclick="reponer(${p.id},${p.stock})" class="btn btn-sm btn-warning float-end">Reponer</button>
-`
-
-lista.appendChild(item)
-
-})
-
-}
-
-
-
-async function reponer(id,stock){
-
-const cantidad=prompt("Cantidad a agregar")
-
-if(!cantidad) return
-
-const nuevoStock=stock+parseInt(cantidad)
-
-await client
-.from("productos")
-.update({stock:nuevoStock})
-.eq("id",id)
-
-cargarProductos()
-
-}
-
 
 
 async function verVentas(){
@@ -359,56 +250,62 @@ const {data}=await client
 .select("*")
 .order("created_at",{ascending:false})
 
-mostrarVentasLista(data)
-
-}
-
-
-
-async function ventasPorFecha(){
-
-const inicio=document.getElementById("fechaInicio").value
-const fin=document.getElementById("fechaFin").value
-
-const {data}=await client
-.from("ventas")
-.select("*")
-.gte("created_at",inicio)
-.lte("created_at",fin+"T23:59:59")
-
-mostrarVentasLista(data)
-
-}
-
-
-
-function mostrarVentasLista(data){
-
-const lista=document.getElementById("listaVentas")
-
+const lista=document.getElementById("historialVentas")
 lista.innerHTML=""
 
 data.forEach(v=>{
 
-const item=document.createElement("li")
-
-item.className="list-group-item"
-
 const fecha=new Date(v.created_at).toLocaleString()
 
-item.textContent=`${v.nombre_producto} x${v.cantidad} - $${v.precio_total} - ${fecha}`
+lista.innerHTML+=`
+<li class="list-group-item">
 
-lista.appendChild(item)
+${v.nombre_producto} - $${v.precio_total} - ${fecha}
+
+</li>
+`
 
 })
 
 }
 
 
+async function calcularDashboard(){
+
+const hoy=new Date()
+hoy.setHours(0,0,0,0)
+
+const {data}=await client
+.from("ventas")
+.select("*")
+.gte("created_at",hoy.toISOString())
+
+let total=0
+
+data.forEach(v=>total+=v.precio_total)
+
+document.getElementById("ventasHoy").innerText=data.length
+document.getElementById("totalVendido").innerText="$"+total
+
+}
+
+
+function mostrarVentas(){
+window.scrollTo(0,0)
+}
+
+function mostrarInventario(){
+window.scrollTo(0,500)
+}
+
+function mostrarHistorial(){
+window.scrollTo(0,900)
+}
+
 
 cargarProductos()
-
-mostrarCaja()
+verVentas()
+calcularDashboard()
 
 </script>
 
