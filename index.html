@@ -47,8 +47,6 @@ color:white;
 
 <div class="row">
 
-<!-- SIDEBAR -->
-
 <div class="col-2 sidebar">
 
 <h4>Sistema</h4>
@@ -59,8 +57,6 @@ color:white;
 
 </div>
 
-
-<!-- CONTENIDO -->
 
 <div class="col-10 p-4">
 
@@ -92,8 +88,6 @@ color:white;
 </div>
 
 
-<!-- AGREGAR PRODUCTO -->
-
 <h4>Agregar producto</h4>
 
 <input id="nombre" placeholder="Nombre producto">
@@ -105,20 +99,26 @@ color:white;
 
 <hr>
 
-
 <h4>Inventario</h4>
 
 <ul id="listaProductos" class="list-group mb-4"></ul>
 
+<hr>
+
+<h4>Consultar ventas por fecha</h4>
+
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
+
+<button class="btn btn-secondary" onclick="ventasPorFecha()">Buscar</button>
 
 <hr>
 
-<button class="btn btn-success mb-3" onclick="verVentas()">Ver ventas</button>
+<button class="btn btn-success mb-3" onclick="verVentas()">Ver todas las ventas</button>
 
 <h4>Historial de ventas</h4>
 
 <ul id="listaVentas" class="list-group"></ul>
-
 
 </div>
 </div>
@@ -149,7 +149,6 @@ precio:precio,
 stock:stock,
 stock_minimo:stock_minimo
 })
-
 
 document.getElementById("nombre").value=""
 document.getElementById("precio").value=""
@@ -187,11 +186,19 @@ const item=document.createElement("li")
 item.className="list-group-item"
 
 item.innerHTML=
-`${p.nombre} - $${p.precio} - Stock: ${p.stock}${alerta}
+`
+${p.nombre} - $${p.precio} - Stock: ${p.stock}${alerta}
+
+<button class="btn btn-sm btn-success me-2"
+onclick="reponer(${p.id},'${p.nombre}',${p.stock})">
+Reponer
+</button>
+
 <button class="btn btn-sm btn-primary float-end"
 onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock},${p.stock_minimo})">
 Vender
-</button>`
+</button>
+`
 
 lista.appendChild(item)
 
@@ -216,7 +223,6 @@ await client
 .eq("id",id)
 
 
-
 const { error } = await client
 .from("ventas")
 .insert({
@@ -224,12 +230,10 @@ nombre_producto:nombre,
 precio:precio
 })
 
-
 if(error){
 alert("Error al registrar la venta")
 return
 }
-
 
 if(nuevoStock <= stock_minimo){
 alert("⚠ STOCK BAJO de "+nombre)
@@ -243,11 +247,74 @@ calcularDashboard()
 
 
 
+async function reponer(id,nombre,stock){
+
+const cantidad = prompt("¿Cuántos productos agregar al stock?")
+
+if(!cantidad || cantidad <= 0){
+return
+}
+
+const nuevoStock = stock + parseInt(cantidad)
+
+await client
+.from("productos")
+.update({stock:nuevoStock})
+.eq("id",id)
+
+alert("Stock actualizado de " + nombre)
+
+cargarProductos()
+calcularDashboard()
+
+}
+
+
+
 async function verVentas(){
 
 const { data } = await client
 .from("ventas")
 .select("*")
+.order("created_at",{ascending:false})
+
+const lista=document.getElementById("listaVentas")
+
+lista.innerHTML=""
+
+data.forEach(v=>{
+
+const item=document.createElement("li")
+
+item.className="list-group-item"
+
+const fecha=new Date(v.created_at).toLocaleString()
+
+item.textContent=`${v.nombre_producto} - $${v.precio} - ${fecha}`
+
+lista.appendChild(item)
+
+})
+
+}
+
+
+
+async function ventasPorFecha(){
+
+const inicio=document.getElementById("fechaInicio").value
+const fin=document.getElementById("fechaFin").value
+
+if(!inicio || !fin){
+alert("Seleccione ambas fechas")
+return
+}
+
+const { data } = await client
+.from("ventas")
+.select("*")
+.gte("created_at",inicio)
+.lte("created_at",fin+"T23:59:59")
 .order("created_at",{ascending:false})
 
 const lista=document.getElementById("listaVentas")
