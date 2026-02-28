@@ -1,54 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
-<title>Panel de Ventas</title>
+<title>Sistema de Ventas</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 
 body{
-font-family: Arial;
-background:#111;
-color:white;
+background:#000;
+color:#fff;
+font-family:Arial;
 margin:0;
-display:flex;
 }
 
-#menu{
+.sidebar{
 width:200px;
-background:#1b1b1b;
-padding:20px;
 height:100vh;
+background:#111;
+position:fixed;
+padding:20px;
 }
 
-#menu button{
+.sidebar button{
 width:100%;
 margin-bottom:10px;
 padding:10px;
-background:#333;
+background:#444;
 border:none;
 color:white;
 cursor:pointer;
 }
 
-#menu button:hover{
-background:#555;
-}
-
-#contenido{
-flex:1;
+.main{
+margin-left:220px;
 padding:20px;
 }
 
 .card{
-background:#1f1f1f;
+background:#111;
 padding:20px;
 margin-bottom:20px;
-border-radius:8px;
 }
 
 table{
@@ -56,36 +49,36 @@ width:100%;
 border-collapse:collapse;
 }
 
-td,th{
-padding:8px;
-border-bottom:1px solid #444;
+th,td{
+padding:12px;
+border-bottom:1px solid #333;
 }
 
-button.vender{
-background:#2ecc71;
+.btn-vender{
+background:#37c978;
 border:none;
-padding:6px 10px;
+padding:8px 15px;
 cursor:pointer;
 }
 
 </style>
 
 </head>
-
 <body>
 
-<div id="menu">
+<div class="sidebar">
 
 <button onclick="mostrarInventario()">Inventario</button>
 <button onclick="mostrarVentas()">Ventas</button>
 
 </div>
 
-<div id="contenido">
+
+<div class="main">
 
 <div class="card">
 <h2>Dashboard</h2>
-<div id="totalVentas">$0</div>
+<h3 id="totalVentas">$0</h3>
 </div>
 
 <div id="inventario">
@@ -107,6 +100,7 @@ cursor:pointer;
 </table>
 
 </div>
+
 
 <div id="ventas" style="display:none">
 
@@ -130,48 +124,33 @@ cursor:pointer;
 
 </div>
 
+
 <script>
 
-const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
+const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
-const client=supabase.createClient(supabaseUrl,supabaseKey)
+const client = supabase.createClient(supabaseUrl,supabaseKey)
 
-function mostrarInventario(){
-
-document.getElementById("inventario").style.display="block"
-document.getElementById("ventas").style.display="none"
-
-}
-
-function mostrarVentas(){
-
-document.getElementById("inventario").style.display="none"
-document.getElementById("ventas").style.display="block"
-
-verVentas()
-
-}
 
 async function cargarProductos(){
 
 const {data,error}=await client
 .from("productos")
 .select("*")
-.order("id",{ascending:true})
+.order("nombre",{ascending:true})
 
 if(error){
-
-console.error(error)
+console.log(error)
 return
-
 }
 
-let html=""
+const tabla=document.getElementById("tablaProductos")
+tabla.innerHTML=""
 
 data.forEach(p=>{
 
-html+=`
+tabla.innerHTML+=`
 
 <tr>
 
@@ -180,7 +159,7 @@ html+=`
 <td>${p.stock}</td>
 
 <td>
-<button class="vender"
+<button class="btn-vender"
 onclick="vender(${p.id},'${p.nombre}',${p.precio},${p.stock},${p.stock_minimo})">
 Vender
 </button>
@@ -192,63 +171,55 @@ Vender
 
 })
 
-document.getElementById("tablaProductos").innerHTML=html
-
 }
+
 
 async function vender(id,nombre,precio,stock,stock_minimo){
 
 if(stock<=0){
-
 alert("No hay stock")
 return
-
 }
 
 const nuevoStock=stock-1
 
-const {error:errorStock}=await client
+// actualizar stock
+await client
 .from("productos")
 .update({stock:nuevoStock})
 .eq("id",id)
 
-if(errorStock){
 
-console.error(errorStock)
-alert("Error actualizando stock")
-return
-
-}
-
-const {error:errorVenta}=await client
+// registrar venta
+const {error}=await client
 .from("ventas")
 .insert([
 {
 nombre_producto:nombre,
 precio:precio,
-fecha:new Date()
+fecha:new Date().toISOString()
 }
 ])
 
-if(errorVenta){
-
-console.error(errorVenta)
+if(error){
+console.log(error)
 alert("Error registrando venta")
 return
-
 }
+
 
 if(nuevoStock<=stock_minimo){
-
 alert("⚠ STOCK BAJO de "+nombre)
+}
+
+
+// recargar todo
+await cargarProductos()
+await verVentas()
+await calcularDashboard()
 
 }
 
-cargarProductos()
-verVentas()
-calcularDashboard()
-
-}
 
 async function verVentas(){
 
@@ -258,17 +229,16 @@ const {data,error}=await client
 .order("fecha",{ascending:false})
 
 if(error){
-
-console.error(error)
+console.log(error)
 return
-
 }
 
-let html=""
+const tabla=document.getElementById("tablaVentas")
+tabla.innerHTML=""
 
 data.forEach(v=>{
 
-html+=`
+tabla.innerHTML+=`
 
 <tr>
 
@@ -282,9 +252,8 @@ html+=`
 
 })
 
-document.getElementById("tablaVentas").innerHTML=html
-
 }
+
 
 async function calcularDashboard(){
 
@@ -293,24 +262,38 @@ const {data,error}=await client
 .select("precio")
 
 if(error){
-
-console.error(error)
+console.log(error)
 return
-
 }
 
 let total=0
 
 data.forEach(v=>{
-
-total+=Number(v.precio)
-
+total+=v.precio
 })
 
 document.getElementById("totalVentas").innerText="$"+total
 
 }
 
+
+function mostrarInventario(){
+
+document.getElementById("inventario").style.display="block"
+document.getElementById("ventas").style.display="none"
+
+}
+
+
+function mostrarVentas(){
+
+document.getElementById("inventario").style.display="none"
+document.getElementById("ventas").style.display="block"
+
+}
+
+
+// iniciar app
 cargarProductos()
 verVentas()
 calcularDashboard()
