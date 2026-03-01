@@ -1,504 +1,319 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Ventas Pro - V3</title>
 
-<meta charset="UTF-8">
-<title>Sistema Ventas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<style>
-
-body{
-background:#f4f6f9;
-}
-
-.sidebar{
-height:100vh;
-background:#2c3e50;
-color:white;
-padding:20px;
-}
-
-.sidebar button{
-width:100%;
-margin-bottom:10px;
-}
-
-.card-total{
-font-size:40px;
-font-weight:bold;
-text-align:center;
-padding:30px;
-}
-
-</style>
-
+    <style>
+        body { background: #f4f6f9; }
+        .sidebar {
+            height: 100vh;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            position: fixed;
+            width: inherit;
+        }
+        .sidebar h4 { 
+            border-bottom: 1px solid #34495e; 
+            padding-bottom: 15px; 
+            margin-bottom: 20px; 
+            text-align: center;
+        }
+        .sidebar .btn {
+            width: 100%;
+            margin-bottom: 12px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .main-content { margin-left: 16.666667%; padding: 30px; }
+        .card-total {
+            font-size: 40px;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            border-left: 5px solid #198754;
+        }
+        .badge-stock { font-size: 0.75rem; }
+    </style>
 </head>
-
 <body>
 
 <div class="container-fluid">
+    <div class="row">
+        <div class="col-2 sidebar">
+            <h4><i class="bi bi-shop"></i> Mi Negocio</h4>
+            <button class="btn btn-outline-light" onclick="mostrarSeccion('ventas')">
+                <i class="bi bi-cart3"></i> Ventas
+            </button>
+            <button class="btn btn-outline-light" onclick="mostrarSeccion('inventario')">
+                <i class="bi bi-box-seam"></i> Inventario
+            </button>
+            <button class="btn btn-outline-light" onclick="mostrarSeccion('historial')">
+                <i class="bi bi-clock-history"></i> Historial
+            </button>
+        </div>
 
-<div class="row">
+        <div class="col-10 main-content">
 
-<div class="col-2 sidebar">
+            <div id="ventas">
+                <h3><i class="bi bi-calculator"></i> Registrar Venta</h3>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3">
+                            <label class="form-label">Producto</label>
+                            <input id="buscarProducto" list="listaProductos" class="form-control mb-3" placeholder="Escribe para buscar...">
+                            <datalist id="listaProductos"></datalist>
 
-<h4>Sistema</h4>
+                            <label class="form-label">Cantidad</label>
+                            <input id="cantidad" type="number" class="form-control mb-3" placeholder="0">
 
-<button class="btn btn-light" onclick="mostrarSeccion('ventas')">Ventas</button>
+                            <button class="btn btn-primary w-100" onclick="agregarCarrito()">
+                                <i class="bi bi-cart-plus-fill"></i> Agregar al carrito
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card card-total mb-3">
+                            <small class="d-block" style="font-size: 15px; color: #666;">Total Venta</small>
+                            $<span id="totalVenta">0</span>
+                        </div>
+                    </div>
+                </div>
 
-<button class="btn btn-light" onclick="mostrarSeccion('inventario')">Inventario</button>
+                <h4><i class="bi bi-list-check"></i> Detalle del Carrito</h4>
+                <ul id="listaCarrito" class="list-group mb-3 shadow-sm"></ul>
+                <button class="btn btn-success btn-lg w-100" onclick="confirmarVenta()">
+                    <i class="bi bi-check-circle"></i> Confirmar Venta
+                </button>
+            </div>
 
-<button class="btn btn-light" onclick="mostrarSeccion('historial')">Historial</button>
+            <div id="inventario" style="display:none">
+                <h3><i class="bi bi-box-seam"></i> Inventario</h3>
+                <hr>
+                <div class="card p-3 mb-4 shadow-sm">
+                    <h5>Nuevo Producto</h5>
+                    <div class="row g-2">
+                        <div class="col-md-4"><input id="nuevoNombre" class="form-control" placeholder="Nombre"></div>
+                        <div class="col-md-2"><input id="nuevoPrecio" type="number" class="form-control" placeholder="Precio"></div>
+                        <div class="col-md-3"><input id="nuevoStock" type="number" class="form-control" placeholder="Stock Inicial"></div>
+                        <div class="col-md-3"><input id="nuevoMinimo" type="number" class="form-control" placeholder="Mínimo Alerta"></div>
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="agregarProducto()">
+                        <i class="bi bi-plus-lg"></i> Guardar en Base de Datos
+                    </button>
+                </div>
+                <ul id="listaInventario" class="list-group shadow-sm"></ul>
+            </div>
 
+            <div id="historial" style="display:none">
+                <h3><i class="bi bi-clock-history"></i> Historial de Ventas</h3>
+                <hr>
+                <div class="input-group mb-3 shadow-sm" style="max-width: 400px;">
+                    <input type="date" id="fechaFiltro" class="form-control">
+                    <button class="btn btn-primary" onclick="buscarVentasPorFecha()">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <button class="btn btn-secondary" onclick="verVentas()">
+                        <i class="bi bi-arrow-clockwise"></i> Ver Todas
+                    </button>
+                </div>
+                <ul id="listaVentas" class="list-group shadow-sm"></ul>
+            </div>
+
+        </div>
+    </div>
 </div>
-
-
-<div class="col-10 p-4">
-
-<!-- VENTAS -->
-
-<div id="ventas">
-
-<h3>Registrar venta</h3>
-
-<input id="buscarProducto" list="listaProductos" class="form-control mb-2" placeholder="Buscar producto">
-
-<datalist id="listaProductos"></datalist>
-
-<input id="cantidad" type="number" class="form-control mb-2" placeholder="Cantidad">
-
-<button class="btn btn-primary mb-3" onclick="agregarCarrito()">Agregar al carrito</button>
-
-<div class="card card-total mb-3">
-
-Total: $<span id="totalVenta">0</span>
-
-</div>
-
-<h4>Carrito</h4>
-
-<ul id="listaCarrito" class="list-group mb-3"></ul>
-
-<button class="btn btn-success" onclick="confirmarVenta()">Confirmar venta</button>
-
-</div>
-
-
-
-<!-- INVENTARIO -->
-
-<div id="inventario" style="display:none">
-
-<h3>Inventario</h3>
-
-<div class="card p-3 mb-4">
-
-<h5>Agregar nuevo producto</h5>
-
-<input id="nuevoNombre" class="form-control mb-2" placeholder="Nombre producto">
-
-<input id="nuevoPrecio" type="number" class="form-control mb-2" placeholder="Precio">
-
-<input id="nuevoStock" type="number" class="form-control mb-2" placeholder="Stock inicial">
-
-<input id="nuevoMinimo" type="number" class="form-control mb-2" placeholder="Stock mínimo">
-
-<button class="btn btn-primary" onclick="agregarProducto()">Guardar producto</button>
-
-</div>
-
-<ul id="listaInventario" class="list-group"></ul>
-
-</div>
-
-
-
-<!-- HISTORIAL -->
-
-<div id="historial" style="display:none">
-
-<h3>Historial ventas</h3>
-
-<input type="date" id="fechaFiltro" class="form-control mb-3">
-
-<button class="btn btn-primary mb-3" onclick="buscarVentasPorFecha()">Buscar</button>
-
-<ul id="listaVentas" class="list-group"></ul>
-
-</div>
-
-
-</div>
-
-</div>
-
-</div>
-
-
 
 <script>
-
-const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
-const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
-
-const client=supabase.createClient(supabaseUrl,supabaseKey)
-
-let productos=[]
-let carrito=[]
-let productoSeleccionado=null
-
-
-
-function mostrarSeccion(seccion){
-
-document.getElementById("ventas").style.display="none"
-document.getElementById("inventario").style.display="none"
-document.getElementById("historial").style.display="none"
-
-document.getElementById(seccion).style.display="block"
-
-}
-
-
-
-async function cargarProductos(){
-
-const {data}=await client
-.from("productos")
-.select("*")
-.order("nombre")
-
-productos=data
-
-const datalist=document.getElementById("listaProductos")
-const listaInventario=document.getElementById("listaInventario")
-
-datalist.innerHTML=""
-listaInventario.innerHTML=""
-
-data.forEach(p=>{
-
-datalist.innerHTML+=`<option value="${p.nombre}">`
-
-let alerta=""
-
-if(p.stock <= p.stock_minimo){
-
-alerta=` <span style="color:red;font-weight:bold">⚠ STOCK BAJO</span>`
-
-}
-
-listaInventario.innerHTML+=`
-
-<li class="list-group-item d-flex justify-content-between">
-
-<div>
-
-${p.nombre} - $${p.precio} - Stock ${p.stock} ${alerta}
-
-</div>
-
-<button class="btn btn-warning btn-sm" onclick="reponer(${p.id},${p.stock},${p.precio})">
-
-Reponer
-
-</button>
-
-</li>
-
-`
-
-})
-
-}
-
-
-
-async function agregarProducto(){
-
-const nombre=document.getElementById("nuevoNombre").value
-const precio=document.getElementById("nuevoPrecio").value
-const stock=document.getElementById("nuevoStock").value
-const minimo=document.getElementById("nuevoMinimo").value
-
-if(!nombre || !precio){
-
-alert("Completar nombre y precio")
-return
-
-}
-
-await client
-.from("productos")
-.insert({
-
-nombre:nombre,
-precio:precio,
-stock:stock,
-stock_minimo:minimo
-
-})
-
-document.getElementById("nuevoNombre").value=""
-document.getElementById("nuevoPrecio").value=""
-document.getElementById("nuevoStock").value=""
-document.getElementById("nuevoMinimo").value=""
-
-cargarProductos()
-
-}
-
-
-
-document.getElementById("buscarProducto").addEventListener("input",function(){
-
-const nombre=this.value
-productoSeleccionado=productos.find(p=>p.nombre===nombre)
-
-})
-
-
-
-function agregarCarrito(){
-
-const cantidad=parseInt(document.getElementById("cantidad").value)
-
-if(!productoSeleccionado){
-alert("Seleccione producto")
-return
-}
-
-if(cantidad>productoSeleccionado.stock){
-alert("Stock insuficiente")
-return
-}
-
-const subtotal=productoSeleccionado.precio*cantidad
-
-carrito.push({
-
-producto_id:productoSeleccionado.id,
-nombre:productoSeleccionado.nombre,
-precio:productoSeleccionado.precio,
-cantidad:cantidad,
-subtotal:subtotal
-
-})
-
-renderCarrito()
-
-document.getElementById("buscarProducto").value=""
-document.getElementById("cantidad").value=""
-
-productoSeleccionado=null
-
-}
-
-
-
-function renderCarrito(){
-
-const lista=document.getElementById("listaCarrito")
-
-lista.innerHTML=""
-
-let total=0
-
-carrito.forEach((i,index)=>{
-
-total+=i.subtotal
-
-lista.innerHTML+=`
-
-<li class="list-group-item d-flex justify-content-between align-items-center">
-
-<div>
-${i.nombre} x${i.cantidad} - $${i.subtotal}
-</div>
-
-<button class="btn btn-danger btn-sm" onclick="eliminarDelCarrito(${index})">
-Eliminar
-</button>
-
-</li>
-
-`
-
-})
-
-document.getElementById("totalVenta").textContent=total
-
-}
-  
-
-function eliminarDelCarrito(indice){
-
-carrito.splice(indice,1)
-
-renderCarrito()
-
-}
-
-
-
-async function confirmarVenta(){
-
-if(carrito.length==0){
-
-alert("Carrito vacío")
-return
-
-}
-
-for(const item of carrito){
-
-await client
-.from("ventas")
-.insert({
-
-producto_id:item.producto_id,
-nombre_producto:item.nombre,
-precio_unitario:item.precio,
-precio_total:item.subtotal
-
-})
-
-const prod=productos.find(p=>p.id==item.producto_id)
-
-const nuevoStock=prod.stock-item.cantidad
-
-await client
-.from("productos")
-.update({stock:nuevoStock})
-.eq("id",item.producto_id)
-
-}
-
-carrito=[]
-
-renderCarrito()
-
-cargarProductos()
-
-verVentas()
-
-}
-
-
-
-async function reponer(id,stockActual,precioActual){
-
-const cantidad=parseInt(prompt("Cantidad a agregar"))
-
-if(!cantidad) return
-
-const nuevoStock=stockActual+cantidad
-
-const nuevoPrecio=prompt("Nuevo precio (enter para dejar igual)",precioActual)
-
-await client
-.from("productos")
-.update({
-
-stock:nuevoStock,
-precio:nuevoPrecio?nuevoPrecio:precioActual
-
-})
-.eq("id",id)
-
-cargarProductos()
-
-}
-
-
-
-async function verVentas(){
-
-const {data}=await client
-.from("ventas")
-.select("*")
-.order("created_at",{ascending:false})
-
-const lista=document.getElementById("listaVentas")
-
-lista.innerHTML=""
-
-data.forEach(v=>{
-
-const fecha=new Date(v.created_at).toLocaleString()
-
-const cantidad = Math.round(v.precio_total / v.precio_unitario)
-
-lista.innerHTML+=`
-
-<li class="list-group-item">
-
-${cantidad} x ${v.nombre_producto} - $${v.precio_total} - ${fecha}
-
-</li>
-
-`
-
-})
-
-}
-
-
-
-async function buscarVentasPorFecha(){
-
-const fecha=document.getElementById("fechaFiltro").value
-
-if(!fecha){
-
-verVentas()
-return
-
-}
-
-const inicio=fecha+"T00:00:00"
-const fin=fecha+"T23:59:59"
-
-const {data}=await client
-.from("ventas")
-.select("*")
-.gte("created_at",inicio)
-.lte("created_at",fin)
-.order("created_at",{ascending:false})
-
-const lista=document.getElementById("listaVentas")
-
-lista.innerHTML=""
-
-data.forEach(v=>{
-
-const fechaVenta=new Date(v.created_at).toLocaleString()
-
-const cantidad = Math.round(v.precio_total / v.precio_unitario)
-
-lista.innerHTML+=`
-
-<li class="list-group-item">
-
-${cantidad} x ${v.nombre_producto} - $${v.precio_total} - ${fechaVenta}
-
-</li>
-
-`
-
-})
-
-}
-
-
-
-cargarProductos()
-verVentas()
-
+    const supabaseUrl = "https://lvtjeeokpejdexlsshqa.supabase.co"
+    const supabaseKey = "sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
+    const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+    let productos = []
+    let carrito = []
+    let productoSeleccionado = null
+
+    function mostrarSeccion(seccion) {
+        document.getElementById("ventas").style.display = "none"
+        document.getElementById("inventario").style.display = "none"
+        document.getElementById("historial").style.display = "none"
+        document.getElementById(seccion).style.display = "block"
+    }
+
+    async function cargarProductos() {
+        const { data } = await client.from("productos").select("*").order("nombre")
+        productos = data || []
+        
+        const datalist = document.getElementById("listaProductos")
+        const listaInventario = document.getElementById("listaInventario")
+
+        datalist.innerHTML = ""
+        listaInventario.innerHTML = ""
+
+        productos.forEach(p => {
+            datalist.innerHTML += `<option value="${p.nombre}">`
+            let alerta = p.stock <= p.stock_minimo ? 
+                `<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle"></i> BAJO STOCK</span>` : ""
+
+            listaInventario.innerHTML += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${p.nombre}</strong> <br>
+                        <small class="text-muted">Precio: $${p.precio} | Stock: ${p.stock}</small> ${alerta}
+                    </div>
+                    <button class="btn btn-warning btn-sm" onclick="reponer(${p.id},${p.stock},${p.precio})">
+                        <i class="bi bi-plus-circle"></i> Reponer
+                    </button>
+                </li>`
+        })
+    }
+
+    async function agregarProducto() {
+        const nombre = document.getElementById("nuevoNombre").value
+        const precio = document.getElementById("nuevoPrecio").value
+        const stock = document.getElementById("nuevoStock").value || 0
+        const minimo = document.getElementById("nuevoMinimo").value || 0
+
+        if(!nombre || !precio) return alert("Nombre y Precio obligatorios")
+
+        await client.from("productos").insert({ nombre, precio, stock, stock_minimo: minimo })
+        
+        document.getElementById("nuevoNombre").value = ""
+        document.getElementById("nuevoPrecio").value = ""
+        document.getElementById("nuevoStock").value = ""
+        document.getElementById("nuevoMinimo").value = ""
+        
+        cargarProductos()
+        alert("Producto guardado correctamente")
+    }
+
+    document.getElementById("buscarProducto").addEventListener("input", function() {
+        productoSeleccionado = productos.find(p => p.nombre === this.value)
+    })
+
+    function agregarCarrito() {
+        const cantInput = document.getElementById("cantidad")
+        const cantidad = parseInt(cantInput.value)
+
+        if(!productoSeleccionado) return alert("Seleccione un producto válido de la lista")
+        if(!cantidad || cantidad <= 0) return alert("Ingrese una cantidad válida")
+        if(cantidad > productoSeleccionado.stock) return alert("No hay suficiente stock")
+
+        const subtotal = productoSeleccionado.precio * cantidad
+        carrito.push({
+            producto_id: productoSeleccionado.id,
+            nombre: productoSeleccionado.nombre,
+            precio: productoSeleccionado.precio,
+            cantidad: cantidad,
+            subtotal: subtotal
+        })
+
+        renderCarrito()
+        document.getElementById("buscarProducto").value = ""
+        cantInput.value = ""
+        productoSeleccionado = null
+    }
+
+    function renderCarrito() {
+        const lista = document.getElementById("listaCarrito")
+        lista.innerHTML = ""
+        let total = 0
+        carrito.forEach((i, index) => {
+            total += i.subtotal
+            lista.innerHTML += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div><strong>${i.nombre}</strong> x ${i.cantidad} <br><small class="text-muted">Subtotal: $${i.subtotal}</small></div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="eliminarDelCarrito(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </li>`
+        })
+        document.getElementById("totalVenta").textContent = total
+    }
+
+    function eliminarDelCarrito(index) {
+        carrito.splice(index, 1)
+        renderCarrito()
+    }
+
+    async function confirmarVenta() {
+        if(carrito.length === 0) return alert("El carrito está vacío")
+
+        for(const item of carrito) {
+            // Registrar venta
+            await client.from("ventas").insert({
+                producto_id: item.producto_id,
+                nombre_producto: item.nombre,
+                precio_unitario: item.precio,
+                precio_total: item.subtotal
+            })
+            // Actualizar stock
+            const p = productos.find(prod => prod.id == item.producto_id)
+            await client.from("productos").update({ stock: p.stock - item.cantidad }).eq("id", item.producto_id)
+        }
+
+        alert("¡Venta confirmada exitosamente!")
+        carrito = []
+        renderCarrito()
+        cargarProductos()
+        verVentas()
+    }
+
+    async function reponer(id, sAct, pAct) {
+        const cant = parseInt(prompt("Cantidad a sumar:"))
+        if(!cant || isNaN(cant)) return
+        const nPre = prompt("Nuevo precio (deja vacío para mantener):", pAct)
+        
+        await client.from("productos").update({
+            stock: sAct + cant,
+            precio: nPre || pAct
+        }).eq("id", id)
+        
+        cargarProductos()
+    }
+
+    async function verVentas() {
+        const { data } = await client.from("ventas").select("*").order("created_at", { ascending: false }).limit(50)
+        renderListaVentas(data)
+    }
+
+    async function buscarVentasPorFecha() {
+        const f = document.getElementById("fechaFiltro").value
+        if(!f) return verVentas()
+        const { data } = await client.from("ventas").select("*")
+            .gte("created_at", f + "T00:00:00").lte("created_at", f + "T23:59:59")
+        renderListaVentas(data)
+    }
+
+    function renderListaVentas(data) {
+        const lista = document.getElementById("listaVentas")
+        lista.innerHTML = ""
+        if(!data || data.length === 0) return lista.innerHTML = "<li class='list-group-item text-muted'>No se encontraron registros</li>"
+        
+        data.forEach(v => {
+            const fecha = new Date(v.created_at).toLocaleString()
+            const cant = Math.round(v.precio_total / v.precio_unitario)
+            lista.innerHTML += `
+                <li class="list-group-item d-flex justify-content-between">
+                    <span><strong>${v.nombre_producto}</strong> (x${cant})</span>
+                    <span class="badge bg-secondary">$${v.precio_total} | ${fecha}</span>
+                </li>`
+        })
+    }
+
+    // Inicio
+    cargarProductos()
+    verVentas()
 </script>
 
 </body>
