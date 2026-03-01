@@ -3,7 +3,8 @@
 <head>
 
 <meta charset="UTF-8">
-<title>Sistema de Ventas</title>
+
+<title>Sistema Ventas</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -12,17 +13,21 @@
 <style>
 
 body{
-background:#f5f5f5;
-font-family:Arial;
+background:#f4f6f9;
+}
+
+.card-total{
+font-size:40px;
+font-weight:bold;
+text-align:center;
+padding:30px;
 }
 
 .sidebar{
-width:200px;
 height:100vh;
-position:fixed;
-background:white;
+background:#2c3e50;
+color:white;
 padding:20px;
-border-right:1px solid #ddd;
 }
 
 .sidebar button{
@@ -30,133 +35,72 @@ width:100%;
 margin-bottom:10px;
 }
 
-.main{
-margin-left:220px;
-padding:30px;
-}
-
-.card{
-border:none;
-border-radius:10px;
-}
-
-.precioGrande{
-font-size:40px;
-font-weight:bold;
-}
-
 </style>
 
 </head>
 
-
 <body>
 
-
-<div class="sidebar">
-
-<h4>Sistema</h4>
-
-<button class="btn btn-primary" onclick="mostrarSeccion('ventas')">Ventas</button>
-
-<button class="btn btn-secondary" onclick="mostrarSeccion('inventario')">Inventario</button>
-
-<button class="btn btn-secondary" onclick="mostrarSeccion('historial')">Historial</button>
-
-</div>
-
-
-
-<div class="main">
-
-
-<div id="ventasSection">
+<div class="container-fluid">
 
 <div class="row">
 
-<div class="col-md-4">
+<div class="col-2 sidebar">
 
-<div class="card bg-success text-white p-3">
-<h5>Ventas hoy</h5>
-<h2 id="ventasHoy">$0</h2>
-</div>
+<h4>Sistema</h4>
 
-</div>
+<button class="btn btn-light" onclick="mostrarSeccion('ventas')">Ventas</button>
 
-</div>
+<button class="btn btn-light" onclick="mostrarSeccion('inventario')">Inventario</button>
 
-
-<br>
-
-
-<div class="card p-4">
-
-<h4>Vender producto</h4>
-
-<input id="buscarProducto" list="listaProductosAuto" class="form-control mb-2" placeholder="Ingrese producto">
-
-<datalist id="listaProductosAuto"></datalist>
-
-<input id="cantidadVenta" type="number" class="form-control mb-3" placeholder="Cantidad" value="1">
-
-<div class="precioGrande text-success" id="precioCalculado">$0</div>
-
-<br>
-
-<button class="btn btn-success" onclick="venderProducto()">Vender</button>
+<button class="btn btn-light" onclick="mostrarSeccion('historial')">Historial</button>
 
 </div>
 
 
-</div>
+<div class="col-10 p-4">
 
+<div id="ventas">
 
+<h3>Registrar venta</h3>
 
+<input id="buscarProducto" list="listaProductos" class="form-control mb-2" placeholder="Buscar producto">
 
-<div id="inventarioSection" style="display:none">
+<datalist id="listaProductos"></datalist>
 
-<div class="card p-4">
+<input id="cantidad" type="number" class="form-control mb-2" placeholder="Cantidad">
 
-<h4>Agregar producto</h4>
+<button class="btn btn-primary mb-3" onclick="agregarCarrito()">Agregar al carrito</button>
 
-<input id="nombre" class="form-control mb-2" placeholder="Nombre">
+<div class="card card-total mb-3">
 
-<input id="precio" type="number" class="form-control mb-2" placeholder="Precio">
-
-<input id="stock" type="number" class="form-control mb-2" placeholder="Stock">
-
-<input id="stock_minimo" type="number" class="form-control mb-3" placeholder="Stock mínimo">
-
-<button class="btn btn-primary" onclick="agregarProducto()">Guardar</button>
+Total: $<span id="totalVenta">0</span>
 
 </div>
 
+<h4>Carrito</h4>
 
-<br>
+<ul id="listaCarrito" class="list-group mb-3"></ul>
 
-
-<div class="card p-4">
-
-<h4>Inventario</h4>
-
-<ul id="listaInventario" class="list-group"></ul>
-
-</div>
+<button class="btn btn-success" onclick="confirmarVenta()">Confirmar venta</button>
 
 </div>
 
 
 
+<div id="inventario" style="display:none">
 
-<div id="historialSection" style="display:none">
+<h3>Inventario</h3>
 
-<div class="card p-4">
+<ul id="listaProductosInventario" class="list-group"></ul>
 
-<h4>Historial de ventas</h4>
+</div>
 
-<input type="date" id="fechaConsulta" class="form-control mb-3">
 
-<button class="btn btn-secondary mb-3" onclick="consultarVentas()">Consultar</button>
+
+<div id="historial" style="display:none">
+
+<h3>Historial ventas</h3>
 
 <ul id="listaVentas" class="list-group"></ul>
 
@@ -164,7 +108,7 @@ font-weight:bold;
 
 </div>
 
-
+</div>
 
 </div>
 
@@ -173,65 +117,74 @@ font-weight:bold;
 <script>
 
 const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
+
 const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
 const client=supabase.createClient(supabaseUrl,supabaseKey)
 
+
+
 let productos=[]
+
+let carrito=[]
+
 let productoSeleccionado=null
 
 
 
 function mostrarSeccion(seccion){
 
-document.getElementById("ventasSection").style.display="none"
-document.getElementById("inventarioSection").style.display="none"
-document.getElementById("historialSection").style.display="none"
+document.getElementById("ventas").style.display="none"
 
-if(seccion=="ventas")document.getElementById("ventasSection").style.display="block"
-if(seccion=="inventario")document.getElementById("inventarioSection").style.display="block"
-if(seccion=="historial")document.getElementById("historialSection").style.display="block"
+document.getElementById("inventario").style.display="none"
+
+document.getElementById("historial").style.display="none"
+
+document.getElementById(seccion).style.display="block"
 
 }
-
 
 
 
 async function cargarProductos(){
 
 const {data}=await client
+
 .from("productos")
+
 .select("*")
+
 .order("nombre")
 
 productos=data
 
-const lista=document.getElementById("listaInventario")
-const auto=document.getElementById("listaProductosAuto")
 
-lista.innerHTML=""
-auto.innerHTML=""
+
+const datalist=document.getElementById("listaProductos")
+
+const listaInventario=document.getElementById("listaProductosInventario")
+
+
+
+datalist.innerHTML=""
+
+listaInventario.innerHTML=""
+
+
 
 data.forEach(p=>{
 
-lista.innerHTML+=`
-<li class="list-group-item d-flex justify-content-between">
+datalist.innerHTML+=`<option value="${p.nombre}">`
+
+listaInventario.innerHTML+=`
+
+<li class="list-group-item">
 
 ${p.nombre} - $${p.precio} - Stock ${p.stock}
 
-<div>
-
-<button class="btn btn-warning btn-sm"
-onclick="reponer(${p.id},${p.stock})">
-Reponer
-</button>
-
-</div>
-
 </li>
-`
 
-auto.innerHTML+=`<option value="${p.nombre}">`
+`
 
 })
 
@@ -245,125 +198,139 @@ const nombre=this.value
 
 productoSeleccionado=productos.find(p=>p.nombre===nombre)
 
-calcularPrecio()
-
 })
 
 
 
-document.getElementById("cantidadVenta").addEventListener("input",calcularPrecio)
+function agregarCarrito(){
 
+const cantidad=parseInt(document.getElementById("cantidad").value)
 
+if(!productoSeleccionado) return alert("Seleccione producto")
 
-function calcularPrecio(){
+if(cantidad>productoSeleccionado.stock) return alert("Stock insuficiente")
 
-if(!productoSeleccionado)return
+const subtotal=productoSeleccionado.precio*cantidad
 
-const cantidad=parseInt(document.getElementById("cantidadVenta").value)
-
-const total=productoSeleccionado.precio*cantidad
-
-document.getElementById("precioCalculado").textContent="$"+total
-
-}
-
-
-
-async function venderProducto(){
-
-if(!productoSeleccionado){
-
-alert("Seleccione producto")
-return
-
-}
-
-const cantidad=parseInt(document.getElementById("cantidadVenta").value)
-
-if(productoSeleccionado.stock<cantidad){
-
-alert("Stock insuficiente")
-return
-
-}
-
-const nuevoStock=productoSeleccionado.stock-cantidad
-
-
-await client
-.from("productos")
-.update({stock:nuevoStock})
-.eq("id",productoSeleccionado.id)
-
-
-await client
-.from("ventas")
-.insert({
+carrito.push({
 
 producto_id:productoSeleccionado.id,
-nombre_producto:productoSeleccionado.nombre,
-precio_unitario:productoSeleccionado.precio,
-precio_total:productoSeleccionado.precio*cantidad
+
+nombre:productoSeleccionado.nombre,
+
+precio:productoSeleccionado.precio,
+
+cantidad:cantidad,
+
+subtotal:subtotal
 
 })
 
-
-document.getElementById("buscarProducto").value=""
-document.getElementById("cantidadVenta").value=1
-document.getElementById("precioCalculado").textContent="$0"
-
-
-cargarProductos()
-verVentas()
-calcularDashboard()
+renderCarrito()
 
 }
 
 
 
-async function agregarProducto(){
+function renderCarrito(){
 
-const nombre=document.getElementById("nombre").value
-const precio=document.getElementById("precio").value
-const stock=document.getElementById("stock").value
-const stock_minimo=document.getElementById("stock_minimo").value
+const lista=document.getElementById("listaCarrito")
+
+lista.innerHTML=""
+
+let total=0
+
+carrito.forEach(i=>{
+
+total+=i.subtotal
+
+lista.innerHTML+=`
+
+<li class="list-group-item">
+
+${i.nombre} x${i.cantidad} - $${i.subtotal}
+
+</li>
+
+`
+
+})
+
+document.getElementById("totalVenta").textContent=total
+
+}
+
+
+
+async function confirmarVenta(){
+
+if(carrito.length==0) return alert("Carrito vacío")
+
+let total=carrito.reduce((s,i)=>s+i.subtotal,0)
+
+
+
+const {data:venta}=await client
+
+.from("ventas")
+
+.insert({total:total})
+
+.select()
+
+.single()
+
+
+
+for(const item of carrito){
 
 await client
-.from("productos")
+
+.from("ventas_detalle")
+
 .insert({
 
-nombre:nombre,
-precio:precio,
-stock:stock,
-stock_minimo:stock_minimo
+venta_id:venta.id,
+
+producto_id:item.producto_id,
+
+nombre_producto:item.nombre,
+
+precio_unitario:item.precio,
+
+cantidad:item.cantidad,
+
+subtotal:item.subtotal
 
 })
 
-document.getElementById("nombre").value=""
-document.getElementById("precio").value=""
-document.getElementById("stock").value=""
-document.getElementById("stock_minimo").value=""
 
-cargarProductos()
+
+const prod=productos.find(p=>p.id==item.producto_id)
+
+const nuevoStock=prod.stock-item.cantidad
+
+
+
+await client
+
+.from("productos")
+
+.update({stock:nuevoStock})
+
+.eq("id",item.producto_id)
 
 }
 
 
 
-async function reponer(id,stock){
+carrito=[]
 
-const cantidad=prompt("Cantidad a agregar")
-
-if(!cantidad)return
-
-const nuevoStock=parseInt(stock)+parseInt(cantidad)
-
-await client
-.from("productos")
-.update({stock:nuevoStock})
-.eq("id",id)
+renderCarrito()
 
 cargarProductos()
+
+verVentas()
 
 }
 
@@ -372,13 +339,20 @@ cargarProductos()
 async function verVentas(){
 
 const {data}=await client
+
 .from("ventas")
+
 .select("*")
+
 .order("created_at",{ascending:false})
+
+
 
 const lista=document.getElementById("listaVentas")
 
 lista.innerHTML=""
+
+
 
 data.forEach(v=>{
 
@@ -388,76 +362,7 @@ lista.innerHTML+=`
 
 <li class="list-group-item">
 
-${v.nombre_producto} - $${v.precio_total} - ${fecha}
-
-</li>
-
-`
-
-})
-
-}
-
-
-
-async function calcularDashboard(){
-
-const {data}=await client
-.from("ventas")
-.select("precio_total,created_at")
-
-let total=0
-
-const hoy=new Date()
-hoy.setHours(0,0,0,0)
-
-data.forEach(v=>{
-
-if(new Date(v.created_at)>=hoy){
-
-total+=v.precio_total
-
-}
-
-})
-
-document.getElementById("ventasHoy").textContent="$"+total
-
-}
-
-
-
-async function consultarVentas(){
-
-const fecha=document.getElementById("fechaConsulta").value
-
-if(!fecha)return
-
-const inicio=fecha+"T00:00:00"
-const fin=fecha+"T23:59:59"
-
-
-const {data}=await client
-.from("ventas")
-.select("*")
-.gte("created_at",inicio)
-.lte("created_at",fin)
-.order("created_at",{ascending:false})
-
-
-const lista=document.getElementById("listaVentas")
-
-lista.innerHTML=""
-
-data.forEach(v=>{
-
-const fecha=new Date(v.created_at).toLocaleString()
-
-lista.innerHTML+=`
-
-<li class="list-group-item">
-
-${v.nombre_producto} - $${v.precio_total} - ${fecha}
+Venta #${v.id} - $${v.total} - ${fecha}
 
 </li>
 
@@ -470,12 +375,11 @@ ${v.nombre_producto} - $${v.precio_total} - ${fecha}
 
 
 cargarProductos()
+
 verVentas()
-calcularDashboard()
 
 </script>
 
 </body>
+
 </html>
-
-
