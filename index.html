@@ -308,15 +308,21 @@ lista.innerHTML=""
 
 let total=0
 
-carrito.forEach(i=>{
+carrito.forEach((i,index)=>{
 
 total+=i.subtotal
 
 lista.innerHTML+=`
 
-<li class="list-group-item">
+<li class="list-group-item d-flex justify-content-between align-items-center">
 
+<div>
 ${i.nombre} x${i.cantidad} - $${i.subtotal}
+</div>
+
+<button class="btn btn-danger btn-sm" onclick="eliminarDelCarrito(${index})">
+Eliminar
+</button>
 
 </li>
 
@@ -325,6 +331,15 @@ ${i.nombre} x${i.cantidad} - $${i.subtotal}
 })
 
 document.getElementById("totalVenta").textContent=total
+
+}
+  
+
+function eliminarDelCarrito(indice){
+
+carrito.splice(indice,1)
+
+renderCarrito()
 
 }
 
