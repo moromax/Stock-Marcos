@@ -416,11 +416,13 @@ data.forEach(v=>{
 
 const fecha=new Date(v.created_at).toLocaleString()
 
+const cantidad = Math.round(v.precio_total / v.precio_unitario)
+
 lista.innerHTML+=`
 
 <li class="list-group-item">
 
-${v.nombre_producto} - $${v.precio_total} - ${fecha}
+${cantidad} x ${v.nombre_producto} - $${v.precio_total} - ${fecha}
 
 </li>
 
@@ -461,11 +463,13 @@ data.forEach(v=>{
 
 const fechaVenta=new Date(v.created_at).toLocaleString()
 
+const cantidad = Math.round(v.precio_total / v.precio_unitario)
+
 lista.innerHTML+=`
 
 <li class="list-group-item">
 
-${v.nombre_producto} - $${v.precio_total} - ${fechaVenta}
+${cantidad} x ${v.nombre_producto} - $${v.precio_total} - ${fechaVenta}
 
 </li>
 
