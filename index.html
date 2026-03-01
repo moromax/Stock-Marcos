@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Ventas Pro - V3</title>
+    <title>Sistema Ventas Pro - v5 pro</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,6 +18,7 @@
             padding: 20px;
             position: fixed;
             width: inherit;
+            z-index: 100;
         }
         .sidebar h4 { 
             border-bottom: 1px solid #34495e; 
@@ -32,8 +33,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            transition: 0.3s;
         }
+        .sidebar .btn:hover { background: #34495e; border-color: #3498db; }
+        
         .main-content { margin-left: 16.666667%; padding: 30px; }
+        
         .card-total {
             font-size: 40px;
             font-weight: bold;
@@ -41,16 +46,19 @@
             padding: 20px;
             background: #fff;
             border-left: 5px solid #198754;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .badge-stock { font-size: 0.75rem; }
+
+        .list-group-item { transition: 0.2s; }
+        .list-group-item:hover { background-color: #f8f9fa; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-2 sidebar">
-            <h4><i class="bi bi-shop"></i> Mi Negocio</h4>
+        <div class="col-2 sidebar shadow">
+            <h4><i class="bi bi-lightning-charge-fill text-warning"></i> v5 pro</h4>
             <button class="btn btn-outline-light" onclick="mostrarSeccion('ventas')">
                 <i class="bi bi-cart3"></i> Ventas
             </button>
@@ -65,67 +73,77 @@
         <div class="col-10 main-content">
 
             <div id="ventas">
-                <h3><i class="bi bi-calculator"></i> Registrar Venta</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3><i class="bi bi-calculator"></i> Nueva Venta</h3>
+                    <span class="badge bg-primary text-uppercase">Módulo de Despacho</span>
+                </div>
                 <hr>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card p-3 mb-3">
-                            <label class="form-label">Producto</label>
-                            <input id="buscarProducto" list="listaProductos" class="form-control mb-3" placeholder="Escribe para buscar...">
+                        <div class="card p-3 mb-3 shadow-sm">
+                            <label class="form-label fw-bold">Producto</label>
+                            <input id="buscarProducto" list="listaProductos" class="form-control mb-3" placeholder="Buscar por nombre...">
                             <datalist id="listaProductos"></datalist>
 
-                            <label class="form-label">Cantidad</label>
-                            <input id="cantidad" type="number" class="form-control mb-3" placeholder="0">
+                            <label class="form-label fw-bold">Cantidad</label>
+                            <input id="cantidad" type="number" class="form-control mb-3" placeholder="Ingrese cantidad">
 
-                            <button class="btn btn-primary w-100" onclick="agregarCarrito()">
+                            <button class="btn btn-primary w-100 py-2" onclick="agregarCarrito()">
                                 <i class="bi bi-cart-plus-fill"></i> Agregar al carrito
                             </button>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="card card-total mb-3">
-                            <small class="d-block" style="font-size: 15px; color: #666;">Total Venta</small>
+                        <div class="card card-total mb-3 shadow-sm">
+                            <small class="d-block text-muted" style="font-size: 14px;">Total a Cobrar</small>
                             $<span id="totalVenta">0</span>
                         </div>
                     </div>
                 </div>
 
-                <h4><i class="bi bi-list-check"></i> Detalle del Carrito</h4>
+                <h4 class="mt-4"><i class="bi bi-list-check"></i> Items en Carrito</h4>
                 <ul id="listaCarrito" class="list-group mb-3 shadow-sm"></ul>
-                <button class="btn btn-success btn-lg w-100" onclick="confirmarVenta()">
-                    <i class="bi bi-check-circle"></i> Confirmar Venta
+                <button class="btn btn-success btn-lg w-100 shadow" onclick="confirmarVenta()">
+                    <i class="bi bi-check-lg"></i> Finalizar Venta
                 </button>
             </div>
 
             <div id="inventario" style="display:none">
-                <h3><i class="bi bi-box-seam"></i> Inventario</h3>
+                <h3><i class="bi bi-box-seam"></i> Inventario de Productos</h3>
                 <hr>
-                <div class="card p-3 mb-4 shadow-sm">
-                    <h5>Nuevo Producto</h5>
+                <div class="card p-3 mb-4 shadow-sm border-0" style="background: #e9ecef;">
+                    <h5 class="mb-3">Registro de Mercadería Nueva</h5>
                     <div class="row g-2">
                         <div class="col-md-4"><input id="nuevoNombre" class="form-control" placeholder="Nombre"></div>
-                        <div class="col-md-2"><input id="nuevoPrecio" type="number" class="form-control" placeholder="Precio"></div>
-                        <div class="col-md-3"><input id="nuevoStock" type="number" class="form-control" placeholder="Stock Inicial"></div>
-                        <div class="col-md-3"><input id="nuevoMinimo" type="number" class="form-control" placeholder="Mínimo Alerta"></div>
+                        <div class="col-md-2"><input id="nuevoPrecio" type="number" class="form-control" placeholder="Precio $"></div>
+                        <div class="col-md-3"><input id="nuevoStock" type="number" class="form-control" placeholder="Stock"></div>
+                        <div class="col-md-3"><input id="nuevoMinimo" type="number" class="form-control" placeholder="Mínimo"></div>
                     </div>
-                    <button class="btn btn-primary mt-3" onclick="agregarProducto()">
-                        <i class="bi bi-plus-lg"></i> Guardar en Base de Datos
+                    <button class="btn btn-dark mt-3" onclick="agregarProducto()">
+                        <i class="bi bi-save"></i> Guardar Producto
                     </button>
                 </div>
                 <ul id="listaInventario" class="list-group shadow-sm"></ul>
             </div>
 
             <div id="historial" style="display:none">
-                <h3><i class="bi bi-clock-history"></i> Historial de Ventas</h3>
+                <h3><i class="bi bi-clock-history"></i> Auditoría de Ventas</h3>
                 <hr>
-                <div class="input-group mb-3 shadow-sm" style="max-width: 400px;">
-                    <input type="date" id="fechaFiltro" class="form-control">
-                    <button class="btn btn-primary" onclick="buscarVentasPorFecha()">
-                        <i class="bi bi-search"></i> Filtrar
-                    </button>
-                    <button class="btn btn-secondary" onclick="verVentas()">
-                        <i class="bi bi-arrow-clockwise"></i> Ver Todas
-                    </button>
+                <div class="card p-3 mb-3 bg-white shadow-sm">
+                    <div class="row align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Filtrar por Fecha</label>
+                            <input type="date" id="fechaFiltro" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary" onclick="buscarVentasPorFecha()">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="verVentas()">
+                                <i class="bi bi-list"></i> Ver Todo
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <ul id="listaVentas" class="list-group shadow-sm"></ul>
             </div>
@@ -163,38 +181,33 @@
         productos.forEach(p => {
             datalist.innerHTML += `<option value="${p.nombre}">`
             let alerta = p.stock <= p.stock_minimo ? 
-                `<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle"></i> BAJO STOCK</span>` : ""
+                `<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle"></i> REPONER</span>` : ""
 
             listaInventario.innerHTML += `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>${p.nombre}</strong> <br>
-                        <small class="text-muted">Precio: $${p.precio} | Stock: ${p.stock}</small> ${alerta}
+                        <span class="fw-bold text-uppercase">${p.nombre}</span> <br>
+                        <small class="text-muted">Precio: $${p.precio} | Disponible: ${p.stock}</small> ${alerta}
                     </div>
-                    <button class="btn btn-warning btn-sm" onclick="reponer(${p.id},${p.stock},${p.precio})">
-                        <i class="bi bi-plus-circle"></i> Reponer
+                    <button class="btn btn-warning btn-sm fw-bold" onclick="reponer(${p.id},${p.stock},${p.precio})">
+                        <i class="bi bi-plus-circle"></i> ACTUALIZAR
                     </button>
                 </li>`
         })
     }
 
     async function agregarProducto() {
-        const nombre = document.getElementById("nuevoNombre").value
-        const precio = document.getElementById("nuevoPrecio").value
-        const stock = document.getElementById("nuevoStock").value || 0
-        const minimo = document.getElementById("nuevoMinimo").value || 0
+        const n = document.getElementById("nuevoNombre").value, p = document.getElementById("nuevoPrecio").value;
+        const s = document.getElementById("nuevoStock").value || 0, m = document.getElementById("nuevoMinimo").value || 0;
 
-        if(!nombre || !precio) return alert("Nombre y Precio obligatorios")
+        if(!n || !p) return alert("Complete los datos básicos")
 
-        await client.from("productos").insert({ nombre, precio, stock, stock_minimo: minimo })
+        await client.from("productos").insert({ nombre: n, precio: p, stock: s, stock_minimo: m })
         
-        document.getElementById("nuevoNombre").value = ""
-        document.getElementById("nuevoPrecio").value = ""
-        document.getElementById("nuevoStock").value = ""
-        document.getElementById("nuevoMinimo").value = ""
+        document.getElementById("nuevoNombre").value = ""; document.getElementById("nuevoPrecio").value = "";
+        document.getElementById("nuevoStock").value = ""; document.getElementById("nuevoMinimo").value = "";
         
-        cargarProductos()
-        alert("Producto guardado correctamente")
+        cargarProductos(); alert("Carga exitosa");
     }
 
     document.getElementById("buscarProducto").addEventListener("input", function() {
@@ -205,22 +218,20 @@
         const cantInput = document.getElementById("cantidad")
         const cantidad = parseInt(cantInput.value)
 
-        if(!productoSeleccionado) return alert("Seleccione un producto válido de la lista")
-        if(!cantidad || cantidad <= 0) return alert("Ingrese una cantidad válida")
-        if(cantidad > productoSeleccionado.stock) return alert("No hay suficiente stock")
+        if(!productoSeleccionado) return alert("Seleccione un producto")
+        if(!cantidad || cantidad <= 0) return alert("Cantidad inválida")
+        if(cantidad > productoSeleccionado.stock) return alert("Stock insuficiente")
 
-        const subtotal = productoSeleccionado.precio * cantidad
         carrito.push({
             producto_id: productoSeleccionado.id,
             nombre: productoSeleccionado.nombre,
             precio: productoSeleccionado.precio,
             cantidad: cantidad,
-            subtotal: subtotal
+            subtotal: productoSeleccionado.precio * cantidad
         })
 
         renderCarrito()
-        document.getElementById("buscarProducto").value = ""
-        cantInput.value = ""
+        document.getElementById("buscarProducto").value = ""; cantInput.value = "";
         productoSeleccionado = null
     }
 
@@ -228,92 +239,95 @@
         const lista = document.getElementById("listaCarrito")
         lista.innerHTML = ""
         let total = 0
-        carrito.forEach((i, index) => {
+        carrito.forEach((i, idx) => {
             total += i.subtotal
             lista.innerHTML += `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div><strong>${i.nombre}</strong> x ${i.cantidad} <br><small class="text-muted">Subtotal: $${i.subtotal}</small></div>
-                    <button class="btn btn-outline-danger btn-sm" onclick="eliminarDelCarrito(${index})">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    <span><strong>${i.nombre}</strong> (x${i.cantidad})</span>
+                    <div>
+                        <span class="badge bg-light text-dark border me-3">$${i.subtotal}</span>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDelCarrito(${idx})"><i class="bi bi-x-lg"></i></button>
+                    </div>
                 </li>`
         })
         document.getElementById("totalVenta").textContent = total
     }
 
-    function eliminarDelCarrito(index) {
-        carrito.splice(index, 1)
-        renderCarrito()
+    function eliminarDelCarrito(idx) {
+        carrito.splice(idx, 1); renderCarrito()
     }
 
     async function confirmarVenta() {
-        if(carrito.length === 0) return alert("El carrito está vacío")
+        if(carrito.length === 0) return alert("Carrito vacío")
 
         for(const item of carrito) {
-            // Registrar venta
             await client.from("ventas").insert({
                 producto_id: item.producto_id,
                 nombre_producto: item.nombre,
                 precio_unitario: item.precio,
                 precio_total: item.subtotal
             })
-            // Actualizar stock
             const p = productos.find(prod => prod.id == item.producto_id)
             await client.from("productos").update({ stock: p.stock - item.cantidad }).eq("id", item.producto_id)
         }
 
-        alert("¡Venta confirmada exitosamente!")
-        carrito = []
-        renderCarrito()
-        cargarProductos()
-        verVentas()
+        alert("Venta procesada con éxito")
+        carrito = []; renderCarrito(); cargarProductos(); verVentas()
     }
 
     async function reponer(id, sAct, pAct) {
-        const cant = parseInt(prompt("Cantidad a sumar:"))
-        if(!cant || isNaN(cant)) return
-        const nPre = prompt("Nuevo precio (deja vacío para mantener):", pAct)
+        const cant = parseInt(prompt("Cantidad a sumar:")); if(!cant || isNaN(cant)) return
+        const nPre = prompt("Nuevo precio (vacio para mantener):", pAct)
         
-        await client.from("productos").update({
-            stock: sAct + cant,
-            precio: nPre || pAct
-        }).eq("id", id)
-        
+        await client.from("productos").update({ stock: sAct + cant, precio: nPre || pAct }).eq("id", id)
         cargarProductos()
     }
 
     async function verVentas() {
-        const { data } = await client.from("ventas").select("*").order("created_at", { ascending: false }).limit(50)
+        const { data } = await client.from("ventas").select("*").order("created_at", { ascending: false }).limit(100)
         renderListaVentas(data)
     }
 
     async function buscarVentasPorFecha() {
         const f = document.getElementById("fechaFiltro").value
         if(!f) return verVentas()
-        const { data } = await client.from("ventas").select("*")
-            .gte("created_at", f + "T00:00:00").lte("created_at", f + "T23:59:59")
+        
+        // El orden descendente asegura que la ULTIMA venta aparezca PRIMERO
+        const { data } = await client.from("ventas")
+            .select("*")
+            .gte("created_at", f + "T00:00:00")
+            .lte("created_at", f + "T23:59:59")
+            .order("created_at", { ascending: false })
+            
         renderListaVentas(data)
     }
 
     function renderListaVentas(data) {
         const lista = document.getElementById("listaVentas")
         lista.innerHTML = ""
-        if(!data || data.length === 0) return lista.innerHTML = "<li class='list-group-item text-muted'>No se encontraron registros</li>"
+        if(!data || data.length === 0) return lista.innerHTML = "<li class='list-group-item'>Sin registros</li>"
         
         data.forEach(v => {
-            const fecha = new Date(v.created_at).toLocaleString()
+            const fecha = new Date(v.created_at).toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
             const cant = Math.round(v.precio_total / v.precio_unitario)
             lista.innerHTML += `
-                <li class="list-group-item d-flex justify-content-between">
-                    <span><strong>${v.nombre_producto}</strong> (x${cant})</span>
-                    <span class="badge bg-secondary">$${v.precio_total} | ${fecha}</span>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small">${fecha} hs</span><br>
+                        <strong>${v.nombre_producto}</strong> (x${cant})
+                    </div>
+                    <span class="h5 mb-0 text-success fw-bold">$${v.precio_total}</span>
                 </li>`
         })
     }
 
-    // Inicio
-    cargarProductos()
-    verVentas()
+    window.onload = () => {
+        // Ponemos la fecha de hoy por defecto en el filtro
+        const hoy = new Date().toLocaleDateString('sv-SE');
+        document.getElementById("fechaFiltro").value = hoy;
+        cargarProductos()
+        verVentas()
+    }
 </script>
 
 </body>
