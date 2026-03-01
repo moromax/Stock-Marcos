@@ -443,6 +443,7 @@ const {data}=await client
 .select("*")
 .gte("created_at",inicio)
 .lte("created_at",fin)
+.order("created_at",{ascending:false})
 
 const lista=document.getElementById("listaVentas")
 
@@ -475,3 +476,4 @@ verVentas()
 
 </body>
 </html>
+
