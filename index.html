@@ -3,7 +3,6 @@
 <head>
 
 <meta charset="UTF-8">
-
 <title>Sistema Ventas</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,13 +15,6 @@ body{
 background:#f4f6f9;
 }
 
-.card-total{
-font-size:40px;
-font-weight:bold;
-text-align:center;
-padding:30px;
-}
-
 .sidebar{
 height:100vh;
 background:#2c3e50;
@@ -33,6 +25,13 @@ padding:20px;
 .sidebar button{
 width:100%;
 margin-bottom:10px;
+}
+
+.card-total{
+font-size:40px;
+font-weight:bold;
+text-align:center;
+padding:30px;
 }
 
 </style>
@@ -59,6 +58,8 @@ margin-bottom:10px;
 
 
 <div class="col-10 p-4">
+
+<!-- VENTAS -->
 
 <div id="ventas">
 
@@ -88,23 +89,32 @@ Total: $<span id="totalVenta">0</span>
 
 
 
+<!-- INVENTARIO -->
+
 <div id="inventario" style="display:none">
 
 <h3>Inventario</h3>
 
-<ul id="listaProductosInventario" class="list-group"></ul>
+<ul id="listaInventario" class="list-group"></ul>
 
 </div>
 
 
+
+<!-- HISTORIAL -->
 
 <div id="historial" style="display:none">
 
 <h3>Historial ventas</h3>
 
+<input type="date" id="fechaFiltro" class="form-control mb-3">
+
+<button class="btn btn-primary mb-3" onclick="buscarVentasPorFecha()">Buscar</button>
+
 <ul id="listaVentas" class="list-group"></ul>
 
 </div>
+
 
 </div>
 
@@ -117,17 +127,12 @@ Total: $<span id="totalVenta">0</span>
 <script>
 
 const supabaseUrl="https://lvtjeeokpejdexlsshqa.supabase.co"
-
 const supabaseKey="sb_publishable_ZPGnGr1Tv0hKf6D_yWH2Ug_r2ro954H"
 
 const client=supabase.createClient(supabaseUrl,supabaseKey)
 
-
-
 let productos=[]
-
 let carrito=[]
-
 let productoSeleccionado=null
 
 
@@ -135,9 +140,7 @@ let productoSeleccionado=null
 function mostrarSeccion(seccion){
 
 document.getElementById("ventas").style.display="none"
-
 document.getElementById("inventario").style.display="none"
-
 document.getElementById("historial").style.display="none"
 
 document.getElementById(seccion).style.display="block"
@@ -149,28 +152,17 @@ document.getElementById(seccion).style.display="block"
 async function cargarProductos(){
 
 const {data}=await client
-
 .from("productos")
-
 .select("*")
-
 .order("nombre")
 
 productos=data
 
-
-
 const datalist=document.getElementById("listaProductos")
-
-const listaInventario=document.getElementById("listaProductosInventario")
-
-
+const listaInventario=document.getElementById("listaInventario")
 
 datalist.innerHTML=""
-
 listaInventario.innerHTML=""
-
-
 
 data.forEach(p=>{
 
@@ -178,9 +170,19 @@ datalist.innerHTML+=`<option value="${p.nombre}">`
 
 listaInventario.innerHTML+=`
 
-<li class="list-group-item">
+<li class="list-group-item d-flex justify-content-between">
+
+<div>
 
 ${p.nombre} - $${p.precio} - Stock ${p.stock}
+
+</div>
+
+<button class="btn btn-warning btn-sm" onclick="reponer(${p.id},${p.stock},${p.precio})">
+
+Reponer
+
+</button>
 
 </li>
 
@@ -195,7 +197,6 @@ ${p.nombre} - $${p.precio} - Stock ${p.stock}
 document.getElementById("buscarProducto").addEventListener("input",function(){
 
 const nombre=this.value
-
 productoSeleccionado=productos.find(p=>p.nombre===nombre)
 
 })
@@ -206,27 +207,36 @@ function agregarCarrito(){
 
 const cantidad=parseInt(document.getElementById("cantidad").value)
 
-if(!productoSeleccionado) return alert("Seleccione producto")
+if(!productoSeleccionado){
+alert("Seleccione producto")
+return
+}
 
-if(cantidad>productoSeleccionado.stock) return alert("Stock insuficiente")
+if(cantidad>productoSeleccionado.stock){
+alert("Stock insuficiente")
+return
+}
 
 const subtotal=productoSeleccionado.precio*cantidad
 
 carrito.push({
 
 producto_id:productoSeleccionado.id,
-
 nombre:productoSeleccionado.nombre,
-
 precio:productoSeleccionado.precio,
-
 cantidad:cantidad,
-
 subtotal:subtotal
 
 })
 
 renderCarrito()
+
+/* limpiar campos */
+
+document.getElementById("buscarProducto").value=""
+document.getElementById("cantidad").value=""
+
+productoSeleccionado=null
 
 }
 
@@ -264,20 +274,19 @@ document.getElementById("totalVenta").textContent=total
 
 async function confirmarVenta(){
 
-if(carrito.length==0) return alert("Carrito vacío")
+if(carrito.length==0){
+
+alert("Carrito vacío")
+return
+
+}
 
 let total=carrito.reduce((s,i)=>s+i.subtotal,0)
 
-
-
 const {data:venta}=await client
-
 .from("ventas")
-
 .insert({total:total})
-
 .select()
-
 .single()
 
 
@@ -285,44 +294,28 @@ const {data:venta}=await client
 for(const item of carrito){
 
 await client
-
 .from("ventas_detalle")
-
 .insert({
 
 venta_id:venta.id,
-
 producto_id:item.producto_id,
-
 nombre_producto:item.nombre,
-
 precio_unitario:item.precio,
-
 cantidad:item.cantidad,
-
 subtotal:item.subtotal
 
 })
-
-
 
 const prod=productos.find(p=>p.id==item.producto_id)
 
 const nuevoStock=prod.stock-item.cantidad
 
-
-
 await client
-
 .from("productos")
-
 .update({stock:nuevoStock})
-
 .eq("id",item.producto_id)
 
 }
-
-
 
 carrito=[]
 
@@ -336,23 +329,42 @@ verVentas()
 
 
 
+async function reponer(id,stockActual,precioActual){
+
+const cantidad=parseInt(prompt("Cantidad a agregar"))
+
+if(!cantidad) return
+
+const nuevoStock=stockActual+cantidad
+
+const nuevoPrecio=prompt("Nuevo precio (enter para dejar igual)",precioActual)
+
+await client
+.from("productos")
+.update({
+
+stock:nuevoStock,
+precio:nuevoPrecio?nuevoPrecio:precioActual
+
+})
+.eq("id",id)
+
+cargarProductos()
+
+}
+
+
+
 async function verVentas(){
 
 const {data}=await client
-
 .from("ventas")
-
 .select("*")
-
 .order("created_at",{ascending:false})
-
-
 
 const lista=document.getElementById("listaVentas")
 
 lista.innerHTML=""
-
-
 
 data.forEach(v=>{
 
@@ -374,12 +386,54 @@ Venta #${v.id} - $${v.total} - ${fecha}
 
 
 
-cargarProductos()
+async function buscarVentasPorFecha(){
 
+const fecha=document.getElementById("fechaFiltro").value
+
+if(!fecha){
+
+verVentas()
+return
+
+}
+
+const inicio=fecha+"T00:00:00"
+const fin=fecha+"T23:59:59"
+
+const {data}=await client
+.from("ventas")
+.select("*")
+.gte("created_at",inicio)
+.lte("created_at",fin)
+
+const lista=document.getElementById("listaVentas")
+
+lista.innerHTML=""
+
+data.forEach(v=>{
+
+const fechaVenta=new Date(v.created_at).toLocaleString()
+
+lista.innerHTML+=`
+
+<li class="list-group-item">
+
+Venta #${v.id} - $${v.total} - ${fechaVenta}
+
+</li>
+
+`
+
+})
+
+}
+
+
+
+cargarProductos()
 verVentas()
 
 </script>
 
 </body>
-
 </html>
