@@ -41,7 +41,6 @@ padding:30px;
 <body>
 
 <div class="container-fluid">
-
 <div class="row">
 
 <div class="col-2 sidebar">
@@ -49,13 +48,10 @@ padding:30px;
 <h4>Sistema</h4>
 
 <button class="btn btn-light" onclick="mostrarSeccion('ventas')">Ventas</button>
-
 <button class="btn btn-light" onclick="mostrarSeccion('inventario')">Inventario</button>
-
 <button class="btn btn-light" onclick="mostrarSeccion('historial')">Historial</button>
 
 </div>
-
 
 <div class="col-10 p-4">
 
@@ -74,9 +70,11 @@ padding:30px;
 <button class="btn btn-primary mb-3" onclick="agregarCarrito()">Agregar al carrito</button>
 
 <div class="card card-total mb-3">
+Total venta: $<span id="totalVenta">0</span>
+</div>
 
-Total: $<span id="totalVenta">0</span>
-
+<div class="card p-3 mb-3">
+Ventas de hoy: $<span id="ventasHoy">0</span>
 </div>
 
 <h4>Carrito</h4>
@@ -86,7 +84,6 @@ Total: $<span id="totalVenta">0</span>
 <button class="btn btn-success" onclick="confirmarVenta()">Confirmar venta</button>
 
 </div>
-
 
 
 <!-- INVENTARIO -->
@@ -100,11 +97,8 @@ Total: $<span id="totalVenta">0</span>
 <h5>Agregar nuevo producto</h5>
 
 <input id="nuevoNombre" class="form-control mb-2" placeholder="Nombre producto">
-
 <input id="nuevoPrecio" type="number" class="form-control mb-2" placeholder="Precio">
-
 <input id="nuevoStock" type="number" class="form-control mb-2" placeholder="Stock inicial">
-
 <input id="nuevoMinimo" type="number" class="form-control mb-2" placeholder="Stock mínimo">
 
 <button class="btn btn-primary" onclick="agregarProducto()">Guardar producto</button>
@@ -133,9 +127,7 @@ Total: $<span id="totalVenta">0</span>
 
 
 </div>
-
 </div>
-
 </div>
 
 
@@ -189,15 +181,11 @@ listaInventario.innerHTML+=`
 <li class="list-group-item d-flex justify-content-between">
 
 <div>
-
 ${p.nombre} - $${p.precio} - Stock ${p.stock}
-
 </div>
 
 <button class="btn btn-warning btn-sm" onclick="reponer(${p.id},${p.stock},${p.precio})">
-
 Reponer
-
 </button>
 
 </li>
@@ -216,13 +204,6 @@ const nombre=document.getElementById("nuevoNombre").value
 const precio=document.getElementById("nuevoPrecio").value
 const stock=document.getElementById("nuevoStock").value
 const minimo=document.getElementById("nuevoMinimo").value
-
-if(!nombre || !precio){
-
-alert("Completar nombre y precio")
-return
-
-}
 
 await client
 .from("productos")
@@ -260,13 +241,17 @@ function agregarCarrito(){
 const cantidad=parseInt(document.getElementById("cantidad").value)
 
 if(!productoSeleccionado){
+
 alert("Seleccione producto")
 return
+
 }
 
 if(cantidad>productoSeleccionado.stock){
+
 alert("Stock insuficiente")
 return
+
 }
 
 const subtotal=productoSeleccionado.precio*cantidad
@@ -300,15 +285,27 @@ lista.innerHTML=""
 
 let total=0
 
-carrito.forEach(i=>{
+carrito.forEach((item,index)=>{
 
-total+=i.subtotal
+item.subtotal=item.precio*item.cantidad
+total+=item.subtotal
 
 lista.innerHTML+=`
 
-<li class="list-group-item">
+<li class="list-group-item d-flex justify-content-between">
 
-${i.nombre} x${i.cantidad} - $${i.subtotal}
+<div>
+
+${item.nombre}
+
+<input type="number" value="${item.cantidad}" style="width:60px"
+onchange="cambiarCantidad(${index},this.value)">
+
+= $${item.subtotal}
+
+</div>
+
+<button class="btn btn-danger btn-sm" onclick="eliminarCarrito(${index})">X</button>
 
 </li>
 
@@ -317,6 +314,24 @@ ${i.nombre} x${i.cantidad} - $${i.subtotal}
 })
 
 document.getElementById("totalVenta").textContent=total
+
+}
+
+
+
+function eliminarCarrito(i){
+
+carrito.splice(i,1)
+renderCarrito()
+
+}
+
+
+
+function cambiarCantidad(i,cantidad){
+
+carrito[i].cantidad=parseInt(cantidad)
+renderCarrito()
 
 }
 
@@ -356,12 +371,11 @@ await client
 }
 
 carrito=[]
-
 renderCarrito()
 
 cargarProductos()
-
 verVentas()
+ventasDelDia()
 
 }
 
@@ -370,7 +384,6 @@ verVentas()
 async function reponer(id,stockActual,precioActual){
 
 const cantidad=parseInt(prompt("Cantidad a agregar"))
-
 if(!cantidad) return
 
 const nuevoStock=stockActual+cantidad
@@ -388,6 +401,30 @@ precio:nuevoPrecio?nuevoPrecio:precioActual
 .eq("id",id)
 
 cargarProductos()
+
+}
+
+
+
+async function ventasDelDia(){
+
+const hoy=new Date().toISOString().split("T")[0]
+
+const {data}=await client
+.from("ventas")
+.select("*")
+.gte("created_at",hoy+"T00:00:00")
+.lte("created_at",hoy+"T23:59:59")
+
+let total=0
+
+data.forEach(v=>{
+
+total+=v.precio_total
+
+})
+
+document.getElementById("ventasHoy").textContent=total
 
 }
 
@@ -428,13 +465,6 @@ async function buscarVentasPorFecha(){
 
 const fecha=document.getElementById("fechaFiltro").value
 
-if(!fecha){
-
-verVentas()
-return
-
-}
-
 const inicio=fecha+"T00:00:00"
 const fin=fecha+"T23:59:59"
 
@@ -471,9 +501,9 @@ ${v.nombre_producto} - $${v.precio_total} - ${fechaVenta}
 
 cargarProductos()
 verVentas()
+ventasDelDia()
 
 </script>
 
 </body>
 </html>
-
