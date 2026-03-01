@@ -95,6 +95,22 @@ Total: $<span id="totalVenta">0</span>
 
 <h3>Inventario</h3>
 
+<div class="card p-3 mb-4">
+
+<h5>Agregar nuevo producto</h5>
+
+<input id="nuevoNombre" class="form-control mb-2" placeholder="Nombre producto">
+
+<input id="nuevoPrecio" type="number" class="form-control mb-2" placeholder="Precio">
+
+<input id="nuevoStock" type="number" class="form-control mb-2" placeholder="Stock inicial">
+
+<input id="nuevoMinimo" type="number" class="form-control mb-2" placeholder="Stock mínimo">
+
+<button class="btn btn-primary" onclick="agregarProducto()">Guardar producto</button>
+
+</div>
+
 <ul id="listaInventario" class="list-group"></ul>
 
 </div>
@@ -194,6 +210,42 @@ Reponer
 
 
 
+async function agregarProducto(){
+
+const nombre=document.getElementById("nuevoNombre").value
+const precio=document.getElementById("nuevoPrecio").value
+const stock=document.getElementById("nuevoStock").value
+const minimo=document.getElementById("nuevoMinimo").value
+
+if(!nombre || !precio){
+
+alert("Completar nombre y precio")
+return
+
+}
+
+await client
+.from("productos")
+.insert({
+
+nombre:nombre,
+precio:precio,
+stock:stock,
+stock_minimo:minimo
+
+})
+
+document.getElementById("nuevoNombre").value=""
+document.getElementById("nuevoPrecio").value=""
+document.getElementById("nuevoStock").value=""
+document.getElementById("nuevoMinimo").value=""
+
+cargarProductos()
+
+}
+
+
+
 document.getElementById("buscarProducto").addEventListener("input",function(){
 
 const nombre=this.value
@@ -230,8 +282,6 @@ subtotal:subtotal
 })
 
 renderCarrito()
-
-/* limpiar campos */
 
 document.getElementById("buscarProducto").value=""
 document.getElementById("cantidad").value=""
@@ -281,28 +331,16 @@ return
 
 }
 
-let total=carrito.reduce((s,i)=>s+i.subtotal,0)
-
-const {data:venta}=await client
-.from("ventas")
-.insert({total:total})
-.select()
-.single()
-
-
-
 for(const item of carrito){
 
 await client
-.from("ventas_detalle")
+.from("ventas")
 .insert({
 
-venta_id:venta.id,
 producto_id:item.producto_id,
 nombre_producto:item.nombre,
 precio_unitario:item.precio,
-cantidad:item.cantidad,
-subtotal:item.subtotal
+precio_total:item.subtotal
 
 })
 
@@ -374,7 +412,7 @@ lista.innerHTML+=`
 
 <li class="list-group-item">
 
-Venta #${v.id} - $${v.total} - ${fecha}
+${v.nombre_producto} - $${v.precio_total} - ${fecha}
 
 </li>
 
@@ -418,7 +456,7 @@ lista.innerHTML+=`
 
 <li class="list-group-item">
 
-Venta #${v.id} - $${v.total} - ${fechaVenta}
+${v.nombre_producto} - $${v.precio_total} - ${fechaVenta}
 
 </li>
 
